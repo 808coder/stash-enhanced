@@ -1002,3 +1002,24 @@ input[type="range"].blue-slider {
     }
   }
 }
+
+.scene-captions-panel {
+  .caption-cue {
+    display: flex;
+    padding: 0.25rem 0.5rem;
+
+    &.active {
+      background-color: rgba(255, 255, 255, 0.15);
+    }
+
+    .caption-timecode {
+      flex: 0 0 5rem;
+      padding: 0;
+      text-align: left;
+    }
+
+    .caption-text {
+      white-space: pre-wrap;
+    }
+  }
+}
