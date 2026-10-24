@@ -2,7 +2,7 @@
 
 ### Issue tracker
 
-GitHub Issues in `808coder/stash`, via `gh`. See `docs/agents/issue-tracker.md`.
+GitHub Issues in `808coder/stash-enhanced`, via `gh`. See `docs/agents/issue-tracker.md`.
 
 ### Triage labels
 
