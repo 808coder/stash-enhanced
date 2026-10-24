@@ -23,6 +23,7 @@ Scenes with captions have a **Captions** tab on the scene details page, after th
 - Use the filter field to show only cues containing the entered text (case-insensitive).
 - Click a timecode to seek the player to the start of that cue.
 - The cue at the current playback position is highlighted while the tab is open.
+- When you seek in the player, or open the tab during playback, the list scrolls to the cue at that position (or the next cue, if no cue is shown at that time). The list does not follow normal playback, and cues hidden by the filter are not scrolled to. On narrow screens, where the whole page scrolls, the list is not scrolled automatically.
 
 Captions are only loaded when the tab is first opened.
 
