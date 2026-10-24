@@ -49,10 +49,12 @@ export const SceneCaptionsPanel: React.FC<ISceneCaptionsPanelProps> = ({
   const [cache, setCache] = useState<Record<string, CaptionCue[]>>({});
   const [error, setError] = useState<string>();
   const [filter, setFilter] = useState("");
-  const [currentTime, setCurrentTime] = useState<number>();
+  const [activeIndex, setActiveIndex] = useState(-1);
 
   const selected =
     captions.find((c) => captionKey(c) === selectedKey) ?? captions[0];
+  // primitives, so refetches of the scene don't restart the fetch effect
+  const { language_code: lang, caption_type: type } = selected;
   const cues = cache[captionKey(selected)];
 
   function captionLabel(c: Caption) {
@@ -66,9 +68,9 @@ export const SceneCaptionsPanel: React.FC<ISceneCaptionsPanelProps> = ({
 
     const controller = new AbortController();
     const url = new URL(captionPath, window.location.href);
-    url.searchParams.set("lang", selected.language_code);
-    url.searchParams.set("type", selected.caption_type);
-    const key = captionKey(selected);
+    url.searchParams.set("lang", lang);
+    url.searchParams.set("type", type);
+    const key = captionKey({ language_code: lang, caption_type: type });
 
     setError(undefined);
     fetch(url.toString(), { signal: controller.signal })
@@ -85,15 +87,19 @@ export const SceneCaptionsPanel: React.FC<ISceneCaptionsPanelProps> = ({
       });
 
     return () => controller.abort();
-  }, [isVisible, captionPath, selected, cues]);
+  }, [isVisible, captionPath, lang, type, cues]);
 
-  // track the playback position while the tab is active
+  // track the active cue while the tab is active. Only the index is stored,
+  // so the list re-renders when the active cue changes, not on every tick.
   useEffect(() => {
-    if (!isVisible) return;
+    if (!isVisible || !cues) return;
 
     let player: ReturnType<typeof getPlayer>;
     let retryTimer: ReturnType<typeof setTimeout> | undefined;
-    const onTimeUpdate = () => setCurrentTime(player?.currentTime());
+    const onTimeUpdate = () => {
+      const time = player?.currentTime();
+      setActiveIndex(time !== undefined ? findActiveCue(cues, time) : -1);
+    };
 
     function bind() {
       player = getPlayer();
@@ -111,13 +117,7 @@ export const SceneCaptionsPanel: React.FC<ISceneCaptionsPanelProps> = ({
       clearTimeout(retryTimer);
       player?.off("timeupdate", onTimeUpdate);
     };
-  }, [isVisible]);
-
-  const activeIndex = useMemo(
-    () =>
-      cues && currentTime !== undefined ? findActiveCue(cues, currentTime) : -1,
-    [cues, currentTime]
-  );
+  }, [isVisible, cues]);
 
   const visibleCues = useMemo(() => {
     if (!cues) return [];
