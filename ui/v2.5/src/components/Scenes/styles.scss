@@ -1004,6 +1004,18 @@ input[type="range"].blue-slider {
 }
 
 .scene-captions-panel {
+  .caption-controls {
+    background-color: #202b33;
+    padding: 0.25rem 0;
+    position: sticky;
+    top: 0;
+    z-index: 3;
+
+    @media (min-width: 575px) and (max-width: 1199px) {
+      top: 3rem;
+    }
+  }
+
   .caption-cue {
     display: flex;
     padding: 0.25rem 0.5rem;

@@ -163,7 +163,7 @@ export const SceneCaptionsPanel: React.FC<ISceneCaptionsPanelProps> = ({
 
   return (
     <div className="scene-captions-panel">
-      <div className="mb-2 d-flex">
+      <div className="caption-controls mb-2 d-flex">
         {captions.length > 1 && (
           <Form.Control
             as="select"
