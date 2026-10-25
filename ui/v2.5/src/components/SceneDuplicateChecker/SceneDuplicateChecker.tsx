@@ -12,7 +12,12 @@ import {
   Tooltip,
 } from "react-bootstrap";
 import { Link, useHistory } from "react-router-dom";
-import { FormattedMessage, FormattedNumber, useIntl } from "react-intl";
+import {
+  FormattedMessage,
+  FormattedNumber,
+  FormattedTime,
+  useIntl,
+} from "react-intl";
 
 import * as GQL from "src/core/generated-graphql";
 import { LoadingIndicator } from "../Shared/LoadingIndicator";
@@ -902,6 +907,7 @@ export const SceneDuplicateChecker: React.FC = () => {
             <col className={`${CLASSNAME}-resolution`} />
             <col className={`${CLASSNAME}-bitrate`} />
             <col className={`${CLASSNAME}-codec`} />
+            <col className={`${CLASSNAME}-mod-time`} />
             <col className={`${CLASSNAME}-operations`} />
           </colgroup>
           <thead>
@@ -915,6 +921,7 @@ export const SceneDuplicateChecker: React.FC = () => {
               <th>{intl.formatMessage({ id: "resolution" })}</th>
               <th>{intl.formatMessage({ id: "bitrate" })}</th>
               <th>{intl.formatMessage({ id: "media_info.video_codec" })}</th>
+              <th>{intl.formatMessage({ id: "file_mod_time_short" })}</th>
               <th>{intl.formatMessage({ id: "actions.delete" })}</th>
             </tr>
           </thead>
@@ -1009,6 +1016,17 @@ export const SceneDuplicateChecker: React.FC = () => {
                         &nbsp;mbps
                       </td>
                       <td>{file?.video_codec ?? ""}</td>
+                      <td>
+                        {file ? (
+                          <FormattedTime
+                            dateStyle="medium"
+                            timeStyle="medium"
+                            value={file.mod_time}
+                          />
+                        ) : (
+                          ""
+                        )}
+                      </td>
                       <td>
                         <Button
                           className="edit-button"
