@@ -1211,6 +1211,7 @@
   "file_count": "File Count",
   "file_info": "File Info",
   "file_mod_time": "File Modification Time",
+  "file_mod_time_short": "File Modified",
   "files": "files",
   "files_amount": "{value} files",
   "filesize": "File Size",
