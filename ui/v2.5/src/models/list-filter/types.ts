@@ -16,6 +16,7 @@ export enum DisplayMode {
   List,
   Wall,
   Tagger,
+  FileDetails,
 }
 
 export interface ILabeledId {

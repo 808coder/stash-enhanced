@@ -11,45 +11,27 @@ import {
   Table,
   Tooltip,
 } from "react-bootstrap";
-import { Link, useHistory } from "react-router-dom";
-import {
-  FormattedMessage,
-  FormattedNumber,
-  FormattedTime,
-  useIntl,
-} from "react-intl";
+import { useHistory } from "react-router-dom";
+import { FormattedMessage, useIntl } from "react-intl";
 
 import * as GQL from "src/core/generated-graphql";
 import { LoadingIndicator } from "../Shared/LoadingIndicator";
 import { ErrorMessage } from "../Shared/ErrorMessage";
-import { HoverPopover } from "../Shared/HoverPopover";
 import { Icon } from "../Shared/Icon";
-import {
-  GalleryLink,
-  GroupLink,
-  SceneMarkerLink,
-  TagLink,
-} from "../Shared/TagLink";
-import { SweatDrops } from "../Shared/SweatDrops";
 import { Pagination } from "src/components/List/Pagination";
-import TextUtils from "src/utils/text";
 import { DeleteScenesDialog } from "src/components/Scenes/DeleteScenesDialog";
 import { EditScenesDialog } from "../Scenes/EditScenesDialog";
-import { PerformerPopoverButton } from "../Shared/PerformerPopoverButton";
 import {
-  faBox,
   faExclamationTriangle,
-  faFileAlt,
-  faFilm,
-  faImages,
-  faMapMarkerAlt,
   faPencilAlt,
-  faTag,
   faTrash,
 } from "@fortawesome/free-solid-svg-icons";
 import { SceneMergeModal } from "../Scenes/SceneMergeDialog";
 import { objectTitle } from "src/core/files";
-import { FileSize } from "../Shared/FileSize";
+import {
+  SceneFileDetailsHeader,
+  SceneFileDetailsRow,
+} from "../Scenes/SceneFileDetailsTable";
 
 const CLASSNAME = "duplicate-checker";
 
@@ -415,176 +397,6 @@ export const SceneDuplicateChecker: React.FC = () => {
     }
   }
 
-  function maybeRenderTagPopoverButton(scene: GQL.SlimSceneDataFragment) {
-    if (scene.tags.length <= 0) return;
-
-    const popoverContent = scene.tags.map((tag) => (
-      <TagLink key={tag.id} tag={tag} />
-    ));
-
-    return (
-      <HoverPopover placement="bottom" content={popoverContent}>
-        <Button className="minimal">
-          <Icon icon={faTag} />
-          <span>{scene.tags.length}</span>
-        </Button>
-      </HoverPopover>
-    );
-  }
-
-  function maybeRenderPerformerPopoverButton(scene: GQL.SlimSceneDataFragment) {
-    if (scene.performers.length <= 0) return;
-
-    return <PerformerPopoverButton performers={scene.performers} />;
-  }
-
-  function maybeRenderGroupPopoverButton(scene: GQL.SlimSceneDataFragment) {
-    if (scene.groups.length <= 0) return;
-
-    const popoverContent = scene.groups.map((sceneGroup) => (
-      <div className="group-tag-container row" key={sceneGroup.group.id}>
-        <Link
-          to={`/groups/${sceneGroup.group.id}`}
-          className="group-tag col m-auto zoom-2"
-        >
-          <img
-            className="image-thumbnail"
-            alt={sceneGroup.group.name ?? ""}
-            src={sceneGroup.group.front_image_path ?? ""}
-          />
-        </Link>
-        <GroupLink
-          key={sceneGroup.group.id}
-          group={sceneGroup.group}
-          className="d-block"
-        />
-      </div>
-    ));
-
-    return (
-      <HoverPopover
-        placement="bottom"
-        content={popoverContent}
-        className="tag-tooltip"
-      >
-        <Button className="minimal">
-          <Icon icon={faFilm} />
-          <span>{scene.groups.length}</span>
-        </Button>
-      </HoverPopover>
-    );
-  }
-
-  function maybeRenderSceneMarkerPopoverButton(
-    scene: GQL.SlimSceneDataFragment
-  ) {
-    if (scene.scene_markers.length <= 0) return;
-
-    const popoverContent = scene.scene_markers.map((marker) => {
-      const markerWithScene = { ...marker, scene: { id: scene.id } };
-      return <SceneMarkerLink key={marker.id} marker={markerWithScene} />;
-    });
-
-    return (
-      <HoverPopover placement="bottom" content={popoverContent}>
-        <Button className="minimal">
-          <Icon icon={faMapMarkerAlt} />
-          <span>{scene.scene_markers.length}</span>
-        </Button>
-      </HoverPopover>
-    );
-  }
-
-  function maybeRenderOCounter(scene: GQL.SlimSceneDataFragment) {
-    if (scene.o_counter) {
-      return (
-        <div>
-          <Button className="minimal">
-            <span className="fa-icon">
-              <SweatDrops />
-            </span>
-            <span>{scene.o_counter}</span>
-          </Button>
-        </div>
-      );
-    }
-  }
-
-  function maybeRenderGallery(scene: GQL.SlimSceneDataFragment) {
-    if (scene.galleries.length <= 0) return;
-
-    const popoverContent = scene.galleries.map((gallery) => (
-      <GalleryLink key={gallery.id} gallery={gallery} />
-    ));
-
-    return (
-      <HoverPopover placement="bottom" content={popoverContent}>
-        <Button className="minimal">
-          <Icon icon={faImages} />
-          <span>{scene.galleries.length}</span>
-        </Button>
-      </HoverPopover>
-    );
-  }
-
-  function maybeRenderFileCount(scene: GQL.SlimSceneDataFragment) {
-    if (scene.files.length <= 1) return;
-
-    const popoverContent = (
-      <FormattedMessage
-        id="files_amount"
-        values={{ value: intl.formatNumber(scene.files.length ?? 0) }}
-      />
-    );
-
-    return (
-      <HoverPopover placement="bottom" content={popoverContent}>
-        <Button className="minimal">
-          <Icon icon={faFileAlt} />
-          <span>{scene.files.length}</span>
-        </Button>
-      </HoverPopover>
-    );
-  }
-
-  function maybeRenderOrganized(scene: GQL.SlimSceneDataFragment) {
-    if (scene.organized) {
-      return (
-        <div>
-          <Button className="minimal">
-            <Icon icon={faBox} />
-          </Button>
-        </div>
-      );
-    }
-  }
-
-  function maybeRenderPopoverButtonGroup(scene: GQL.SlimSceneDataFragment) {
-    if (
-      scene.tags.length > 0 ||
-      scene.performers.length > 0 ||
-      scene.groups.length > 0 ||
-      scene.scene_markers.length > 0 ||
-      scene?.o_counter ||
-      scene.galleries.length > 0 ||
-      scene.files.length > 1 ||
-      scene.organized
-    ) {
-      return (
-        <ButtonGroup className="flex-wrap">
-          {maybeRenderTagPopoverButton(scene)}
-          {maybeRenderPerformerPopoverButton(scene)}
-          {maybeRenderGroupPopoverButton(scene)}
-          {maybeRenderSceneMarkerPopoverButton(scene)}
-          {maybeRenderOCounter(scene)}
-          {maybeRenderGallery(scene)}
-          {maybeRenderFileCount(scene)}
-          {maybeRenderOrganized(scene)}
-        </ButtonGroup>
-      );
-    }
-  }
-
   function renderPagination() {
     return (
       <div className="d-flex mt-2 mb-2">
@@ -897,154 +709,45 @@ export const SceneDuplicateChecker: React.FC = () => {
         {renderPagination()}
 
         <Table responsive striped className={`${CLASSNAME}-table`}>
-          <colgroup>
-            <col className={`${CLASSNAME}-checkbox`} />
-            <col className={`${CLASSNAME}-sprite`} />
-            <col className={`${CLASSNAME}-title`} />
-            <col className={`${CLASSNAME}-details`} />
-            <col className={`${CLASSNAME}-duration`} />
-            <col className={`${CLASSNAME}-filesize`} />
-            <col className={`${CLASSNAME}-resolution`} />
-            <col className={`${CLASSNAME}-bitrate`} />
-            <col className={`${CLASSNAME}-codec`} />
-            <col className={`${CLASSNAME}-mod-time`} />
-            <col className={`${CLASSNAME}-operations`} />
-          </colgroup>
-          <thead>
-            <tr>
-              <th> </th>
-              <th> </th>
-              <th>{intl.formatMessage({ id: "details" })}</th>
-              <th> </th>
-              <th>{intl.formatMessage({ id: "duration" })}</th>
-              <th>{intl.formatMessage({ id: "filesize" })}</th>
-              <th>{intl.formatMessage({ id: "resolution" })}</th>
-              <th>{intl.formatMessage({ id: "bitrate" })}</th>
-              <th>{intl.formatMessage({ id: "media_info.video_codec" })}</th>
-              <th>{intl.formatMessage({ id: "file_mod_time_short" })}</th>
-              <th>{intl.formatMessage({ id: "actions.delete" })}</th>
-            </tr>
-          </thead>
+          <SceneFileDetailsHeader
+            className={CLASSNAME}
+            operationsHeader={intl.formatMessage({ id: "actions.delete" })}
+          />
           <tbody>
             {filteredScenes.map((group, groupIndex) =>
               group.map((scene, i) => {
-                const file =
-                  scene.files.length > 0 ? scene.files[0] : undefined;
-
                 return (
                   <>
                     {i === 0 && groupIndex !== 0 ? (
                       <tr className="separator" />
                     ) : undefined}
-                    <tr
-                      className={i === 0 ? "duplicate-group" : ""}
+                    <SceneFileDetailsRow
                       key={scene.id}
-                    >
-                      <td>
-                        <Form.Check
-                          checked={checkedScenes[scene.id]}
-                          onChange={(e) =>
-                            handleCheck(e.currentTarget.checked, scene.id)
-                          }
-                        />
-                      </td>
-                      <td>
-                        <HoverPopover
-                          content={
-                            <img
-                              src={scene.paths.sprite ?? ""}
-                              alt=""
-                              width={600}
-                            />
-                          }
-                          placement="right"
-                        >
-                          <img
-                            src={scene.paths.sprite ?? ""}
-                            alt=""
-                            width={100}
-                            style={{
-                              border: checkedScenes[scene.id]
-                                ? "2px solid red"
-                                : "",
-                            }}
-                          />
-                        </HoverPopover>
-                      </td>
-                      <td className="text-left">
-                        <p>
-                          <Link
-                            to={`/scenes/${scene.id}`}
-                            style={{
-                              fontWeight: checkedScenes[scene.id]
-                                ? "bold"
-                                : "inherit",
-                              textDecoration: checkedScenes[scene.id]
-                                ? "line-through 3px"
-                                : "inherit",
-                              textDecorationColor: checkedScenes[scene.id]
-                                ? "red"
-                                : "inherit",
-                            }}
+                      className={i === 0 ? "duplicate-group" : ""}
+                      scene={scene}
+                      checked={checkedScenes[scene.id] ?? false}
+                      onCheck={(checked) => handleCheck(checked, scene.id)}
+                      markChecked
+                      operations={
+                        <>
+                          <Button
+                            className="edit-button"
+                            variant="danger"
+                            data-action="delete"
+                            onClick={() => handleDeleteScene(scene)}
                           >
-                            {" "}
-                            {scene.title
-                              ? scene.title
-                              : TextUtils.fileNameFromPath(
-                                  file?.path ?? ""
-                                )}{" "}
-                          </Link>
-                        </p>
-                        <p className="scene-path">{file?.path ?? ""}</p>
-                      </td>
-                      <td className="scene-details">
-                        {maybeRenderPopoverButtonGroup(scene)}
-                      </td>
-                      <td>
-                        {file?.duration &&
-                          TextUtils.secondsToTimestamp(file.duration)}
-                      </td>
-                      <td>
-                        <FileSize size={file?.size ?? 0} />
-                      </td>
-                      <td>{`${file?.width ?? 0}x${file?.height ?? 0}`}</td>
-                      <td>
-                        <FormattedNumber
-                          value={(file?.bit_rate ?? 0) / 1000000}
-                          maximumFractionDigits={2}
-                        />
-                        &nbsp;mbps
-                      </td>
-                      <td>{file?.video_codec ?? ""}</td>
-                      <td>
-                        {file ? (
-                          <FormattedTime
-                            dateStyle="medium"
-                            timeStyle="medium"
-                            value={file.mod_time}
-                          />
-                        ) : (
-                          ""
-                        )}
-                      </td>
-                      <td>
-                        <Button
-                          className="edit-button"
-                          variant="danger"
-                          data-action="delete"
-                          onClick={() => handleDeleteScene(scene)}
-                        >
-                          <FormattedMessage id="actions.delete" />
-                        </Button>
-                        <Button
-                          className="edit-button"
-                          data-action="merge"
-                          onClick={() => onMergeClicked(group, scene)}
-                        >
-                          <FormattedMessage id="actions.merge" />
-                        </Button>
-                      </td>
-                    </tr>
+                            <FormattedMessage id="actions.delete" />
+                          </Button>
+                          <Button
+                            className="edit-button"
+                            data-action="merge"
+                            onClick={() => onMergeClicked(group, scene)}
+                          >
+                            <FormattedMessage id="actions.merge" />
+                          </Button>
+                        </>
+                      }
+                    />
                   </>
                 );
               })

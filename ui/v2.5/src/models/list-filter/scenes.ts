@@ -86,6 +86,7 @@ const displayModeOptions = [
   DisplayMode.List,
   DisplayMode.Wall,
   DisplayMode.Tagger,
+  DisplayMode.FileDetails,
 ];
 
 export const PerformerAgeCriterionOption =
