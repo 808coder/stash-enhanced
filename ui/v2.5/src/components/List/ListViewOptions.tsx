@@ -16,6 +16,7 @@ import {
   faChevronDown,
   faList,
   faSquare,
+  faTable,
   faTags,
   faThLarge,
 } from "@fortawesome/free-solid-svg-icons";
@@ -39,6 +40,8 @@ function getIcon(option: DisplayMode) {
       return faSquare;
     case DisplayMode.Tagger:
       return faTags;
+    case DisplayMode.FileDetails:
+      return faTable;
   }
 }
 
@@ -56,6 +59,9 @@ function getLabelId(option: DisplayMode) {
       break;
     case DisplayMode.Tagger:
       displayModeId = "tagger";
+      break;
+    case DisplayMode.FileDetails:
+      displayModeId = "file_details";
       break;
   }
   return `display_mode.${displayModeId}`;
@@ -98,12 +104,18 @@ export const ListViewOptions: React.FC<IListViewOptionsProps> = ({
         onSetDisplayMode(DisplayMode.Tagger);
       }
     });
+    Mousetrap.bind("v f", () => {
+      if (displayModeOptions.includes(DisplayMode.FileDetails)) {
+        onSetDisplayMode(DisplayMode.FileDetails);
+      }
+    });
 
     return () => {
       Mousetrap.unbind("v g");
       Mousetrap.unbind("v l");
       Mousetrap.unbind("v w");
       Mousetrap.unbind("v t");
+      Mousetrap.unbind("v f");
     };
   });
 

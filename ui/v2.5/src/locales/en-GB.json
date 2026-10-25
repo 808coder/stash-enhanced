@@ -1129,6 +1129,7 @@
   "display_mode": {
     "grid": "Grid",
     "label_current": "Display Mode: {current}",
+    "file_details": "File Details",
     "list": "List",
     "tagger": "Tagger",
     "unknown": "Unknown",

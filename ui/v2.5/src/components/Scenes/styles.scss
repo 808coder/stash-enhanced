@@ -981,6 +981,11 @@ input[type="range"].blue-slider {
   max-height: calc(100dvh - 210px);
 }
 
+.scene-file-details-table .scene-path {
+  font-size: 0.88em;
+  white-space: pre-wrap;
+}
+
 .scene-list .filtered-list-toolbar {
   // hide play and create new buttons on xs screens
   // show these in the drop down menu instead

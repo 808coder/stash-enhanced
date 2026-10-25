@@ -31,6 +31,7 @@
 | `v l` | Set view to list |
 | `v w` | Set view to wall |
 | `v t` | Set view to tagger |
+| `v f` | Set view to file details |
 | `+` | Increase zoom slider |
 | `-` | Decrease zoom slider |
 | `←` | Previous page of results |

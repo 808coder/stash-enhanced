@@ -11,6 +11,7 @@ import { Tagger } from "../Tagger/scenes/SceneTagger";
 import { IPlaySceneOptions, SceneQueue } from "src/models/sceneQueue";
 import { SceneWallPanel } from "./SceneWallPanel";
 import { SceneListTable } from "./SceneListTable";
+import { SceneFileDetailsTable } from "./SceneFileDetailsTable";
 import { EditScenesDialog } from "./EditScenesDialog";
 import { DeleteScenesDialog } from "./DeleteScenesDialog";
 import { GenerateDialog } from "../Dialogs/GenerateDialog";
@@ -225,6 +226,16 @@ const SceneList: React.FC<{
           scenes={scenes}
           sceneQueue={queue}
           zoomIndex={filter.zoomIndex}
+          selectedIds={selectedIds}
+          onSelectChange={onSelectChange}
+        />
+      );
+    }
+    if (filter.displayMode === DisplayMode.FileDetails) {
+      return (
+        <SceneFileDetailsTable
+          scenes={scenes}
+          queue={queue}
           selectedIds={selectedIds}
           onSelectChange={onSelectChange}
         />
