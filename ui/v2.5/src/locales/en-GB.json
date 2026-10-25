@@ -182,6 +182,11 @@
     "filesystem": "Filesystem"
   },
   "captions": "Captions",
+  "captions_panel": {
+    "filter_no_matches": "No captions match the filter.",
+    "load_error": "Failed to load captions",
+    "no_captions": "No captions found"
+  },
   "career_end": "Career End",
   "career_length": "Career Length",
   "career_start": "Career Start",

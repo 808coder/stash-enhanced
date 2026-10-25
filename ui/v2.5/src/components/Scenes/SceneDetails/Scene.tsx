@@ -22,6 +22,7 @@ import {
   useSceneIncrementPlayCount,
 } from "src/core/StashService";
 
+import { SceneCaptionsPanel } from "./SceneCaptionsPanel";
 import { SceneEditPanel } from "./SceneEditPanel";
 import { ErrorMessage } from "src/components/Shared/ErrorMessage";
 import { LoadingIndicator } from "src/components/Shared/LoadingIndicator";
@@ -560,6 +561,13 @@ const ScenePage: React.FC<IProps> = PatchComponent("ScenePage", (props) => {
                 <FormattedMessage id="markers" />
               </Nav.Link>
             </Nav.Item>
+            {scene.captions && scene.captions.length > 0 ? (
+              <Nav.Item>
+                <Nav.Link eventKey="scene-captions-panel">
+                  <FormattedMessage id="captions" />
+                </Nav.Link>
+              </Nav.Item>
+            ) : undefined}
             {scene.groups.length > 0 ? (
               <Nav.Item>
                 <Nav.Link eventKey="scene-group-panel">
@@ -636,6 +644,17 @@ const ScenePage: React.FC<IProps> = PatchComponent("ScenePage", (props) => {
               isVisible={activeTabKey === "scene-markers-panel"}
             />
           </Tab.Pane>
+          {scene.captions && scene.captions.length > 0 && (
+            <Tab.Pane eventKey="scene-captions-panel" mountOnEnter>
+              <SceneCaptionsPanel
+                key={scene.id}
+                captionPath={scene.paths.caption}
+                captions={scene.captions}
+                isVisible={activeTabKey === "scene-captions-panel"}
+                onClickTimecode={setTimestamp}
+              />
+            </Tab.Pane>
+          )}
           <Tab.Pane eventKey="scene-group-panel">
             <SceneGroupPanel scene={scene} />
           </Tab.Pane>

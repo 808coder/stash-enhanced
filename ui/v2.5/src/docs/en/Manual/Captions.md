@@ -15,4 +15,16 @@ Where `{language_code}` is defined by the [ISO-6399-1](https://en.wikipedia.org/
 
 Scenes with captions can be filtered with the `captions` criterion.
 
+## Captions tab
+
+Scenes with captions have a **Captions** tab on the scene details page, after the Markers tab. It lists every cue of the selected caption file with its start time and text.
+
+- If the scene has more than one caption file, use the dropdown to choose the language and type. The first caption is selected by default.
+- Use the filter field to show only cues containing the entered text (case-insensitive).
+- Click a timecode to seek the player to the start of that cue.
+- The cue at the current playback position is highlighted while the tab is open.
+- When you seek in the player, or open the tab during playback, the list scrolls to the cue at that position (or the next cue, if no cue is shown at that time). The list does not follow normal playback, and cues hidden by the filter are not scrolled to. On narrow screens, where the whole page scrolls, the list is not scrolled automatically.
+
+Captions are only loaded when the tab is first opened.
+
 > **⚠️ Note:** If the caption file was added after the scene was initially added during scan, you will need to run a Selective scan task for it to show up.
