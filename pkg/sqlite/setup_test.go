@@ -1143,6 +1143,7 @@ func makeSceneFile(i int) *models.VideoFile {
 			Basename:       getSceneBasename(i),
 			ParentFolderID: folderIDs[folderIdxWithSceneFiles],
 			Fingerprints:   fp,
+			Size:           getFileSize(i),
 		},
 		Duration: getSceneDuration(i),
 		Height:   getHeight(i),

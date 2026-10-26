@@ -57,6 +57,7 @@ func (qb *sceneFilterHandler) criterionHandler() criterionHandler {
 		intCriterionHandler(sceneFilter.ID, "scenes.id", nil),
 		pathCriterionHandler(sceneFilter.Path, "folders.path", "files.basename", qb.addFoldersTable),
 		qb.fileCountCriterionHandler(sceneFilter.FileCount),
+		int64CriterionHandler(sceneFilter.FileSize, "files.size", qb.addFilesTable),
 		stringCriterionHandler(sceneFilter.Title, "scenes.title"),
 		stringCriterionHandler(sceneFilter.Code, "scenes.code"),
 		stringCriterionHandler(sceneFilter.Details, "scenes.details"),
