@@ -2,6 +2,7 @@ import { IntlShape } from "react-intl";
 import {
   CriterionModifier,
   HierarchicalMultiCriterionInput,
+  Int64CriterionInput,
   IntCriterionInput,
   MultiCriterionInput,
   TimestampCriterionInput,
@@ -916,6 +917,51 @@ export class NumberCriterion extends ModifierCriterion<INumberValue> {
     }
 
     return true;
+  }
+}
+
+export const FILE_SIZE_MIB = 1024 * 1024;
+export const FILE_SIZE_GIB = 1024 * FILE_SIZE_MIB;
+
+export class FileSizeCriterionOption extends MandatoryNumberCriterionOption {
+  constructor(messageID: string, value: CriterionType) {
+    super(messageID, value, () => new FileSizeCriterion(this));
+  }
+}
+
+export function createFileSizeCriterionOption(
+  value: CriterionType,
+  messageID?: string
+) {
+  return new FileSizeCriterionOption(messageID ?? value, value);
+}
+
+// FileSizeCriterion values are always stored as a number of bytes.
+export class FileSizeCriterion extends NumberCriterion {
+  public toCriterionInput(): Int64CriterionInput {
+    return {
+      modifier: this.modifier,
+      value: this.value?.value ?? 0,
+      value2: this.value?.value2,
+    };
+  }
+
+  private formatBytes(bytes: number) {
+    const { size, unit } = TextUtils.fileSize(bytes);
+    return `${Number(size.toFixed(2))} ${TextUtils.formatFileSizeUnit(unit)}`;
+  }
+
+  protected getLabelValue(_intl: IntlShape) {
+    const value = this.formatBytes(this.value.value ?? 0);
+    const value2 = this.formatBytes(this.value.value2 ?? 0);
+    if (
+      this.modifier === CriterionModifier.Between ||
+      this.modifier === CriterionModifier.NotBetween
+    ) {
+      return `${value}, ${value2}`;
+    } else {
+      return value;
+    }
   }
 }
 

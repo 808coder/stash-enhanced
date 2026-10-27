@@ -5695,3 +5695,83 @@ func TestSceneQueryPerformerAgeUsesProductionDate(t *testing.T) {
 		assert.Less(withIdx, withoutIdx)
 	})
 }
+
+func TestSceneQueryFileSize(t *testing.T) {
+	// larger than 2^32 to ensure 64-bit values are accepted
+	const large = int64(5) << 30
+
+	tests := []struct {
+		name      string
+		criterion models.Int64CriterionInput
+		wantAny   bool
+	}{
+		{"equals", models.Int64CriterionInput{Value: getFileSize(sceneIdxWithGroup + 1), Modifier: models.CriterionModifierEquals}, true},
+		{"not equals", models.Int64CriterionInput{Value: getFileSize(sceneIdxWithGroup + 1), Modifier: models.CriterionModifierNotEquals}, true},
+		{"greater than", models.Int64CriterionInput{Value: getFileSize(sceneIdxWithGroup + 1), Modifier: models.CriterionModifierGreaterThan}, true},
+		{"less than", models.Int64CriterionInput{Value: getFileSize(sceneIdxWithGroup + 1), Modifier: models.CriterionModifierLessThan}, true},
+		{"between", models.Int64CriterionInput{Value: getFileSize(sceneIdxWithGroup + 1), Value2: ptr(getFileSize(fileIdxStartVideoFiles+1) + 100), Modifier: models.CriterionModifierBetween}, true},
+		{"not between", models.Int64CriterionInput{Value: getFileSize(sceneIdxWithGroup + 1), Value2: ptr(getFileSize(fileIdxStartVideoFiles+1) + 100), Modifier: models.CriterionModifierNotBetween}, true},
+		{"greater than large", models.Int64CriterionInput{Value: large, Modifier: models.CriterionModifierGreaterThan}, false},
+		{"less than large", models.Int64CriterionInput{Value: large, Modifier: models.CriterionModifierLessThan}, true},
+		{"between large", models.Int64CriterionInput{Value: 0, Value2: ptr(large), Modifier: models.CriterionModifierBetween}, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			verifyScenesFileSize(t, tt.criterion, tt.wantAny)
+		})
+	}
+}
+
+func verifyScenesFileSize(t *testing.T, sizeCriterion models.Int64CriterionInput, wantAny bool) {
+	withTxn(func(ctx context.Context) error {
+		sqb := db.Scene
+		sceneFilter := models.SceneFilterType{
+			FileSize: &sizeCriterion,
+		}
+
+		scenes := queryScene(ctx, t, sqb, &sceneFilter, nil)
+		if wantAny {
+			assert.NotEmpty(t, scenes)
+		} else {
+			assert.Empty(t, scenes)
+		}
+
+		// a scene must match if any of its files match
+		matches := func(size int64) bool {
+			switch sizeCriterion.Modifier {
+			case models.CriterionModifierEquals:
+				return size == sizeCriterion.Value
+			case models.CriterionModifierNotEquals:
+				return size != sizeCriterion.Value
+			case models.CriterionModifierGreaterThan:
+				return size > sizeCriterion.Value
+			case models.CriterionModifierLessThan:
+				return size < sizeCriterion.Value
+			case models.CriterionModifierBetween:
+				return size >= sizeCriterion.Value && size <= *sizeCriterion.Value2
+			case models.CriterionModifierNotBetween:
+				return size < sizeCriterion.Value || size > *sizeCriterion.Value2
+			}
+			return false
+		}
+
+		for _, scene := range scenes {
+			if err := scene.LoadFiles(ctx, db.Scene); err != nil {
+				t.Errorf("Error querying scene files: %v", err)
+				return nil
+			}
+
+			found := false
+			for _, f := range scene.Files.List() {
+				if matches(f.Base().Size) {
+					found = true
+					break
+				}
+			}
+			assert.True(t, found, "scene %d has no file matching %v", scene.ID, sizeCriterion.Modifier)
+		}
+
+		return nil
+	})
+}

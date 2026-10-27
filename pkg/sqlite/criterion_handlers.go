@@ -255,6 +255,18 @@ func intCriterionHandler(c *models.IntCriterionInput, column string, addJoinFn f
 	}
 }
 
+func int64CriterionHandler(c *models.Int64CriterionInput, column string, addJoinFn func(f *filterBuilder, joinType joinType)) criterionHandlerFunc {
+	return func(ctx context.Context, f *filterBuilder) {
+		if c != nil {
+			if addJoinFn != nil {
+				addJoinFn(f, joinTypeInner)
+			}
+			clause, args := getInt64CriterionWhereClause(column, *c)
+			f.addWhere(clause, args...)
+		}
+	}
+}
+
 func floatCriterionHandler(c *models.FloatCriterionInput, column string, addJoinFn func(f *filterBuilder, joinType joinType)) criterionHandlerFunc {
 	return func(ctx context.Context, f *filterBuilder) {
 		if c != nil {

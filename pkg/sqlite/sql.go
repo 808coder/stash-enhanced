@@ -221,6 +221,17 @@ func getIntWhereClause(column string, modifier models.CriterionModifier, value i
 	return getNumericWhereClause(column, modifier, args)
 }
 
+func getInt64CriterionWhereClause(column string, input models.Int64CriterionInput) (string, []interface{}) {
+	upper := input.Value2
+	if upper == nil {
+		u := int64(0)
+		upper = &u
+	}
+
+	args := []interface{}{input.Value, *upper}
+	return getNumericWhereClause(column, input.Modifier, args)
+}
+
 func getFloatCriterionWhereClause(column string, input models.FloatCriterionInput) (string, []interface{}) {
 	return getFloatWhereClause(column, input.Modifier, input.Value, input.Value2)
 }

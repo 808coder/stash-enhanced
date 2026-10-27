@@ -3,6 +3,7 @@ import React, { useCallback, useMemo } from "react";
 import { CriterionModifier } from "src/core/generated-graphql";
 import {
   DurationCriterion,
+  FileSizeCriterion,
   CriterionValue,
   ModifierCriterion,
   IHierarchicalLabeledIdCriterion,
@@ -21,6 +22,7 @@ import {
   criterionIsTimestampValue,
 } from "src/models/list-filter/types";
 import { DurationFilter } from "./Filters/DurationFilter";
+import { FileSizeFilter } from "./Filters/FileSizeFilter";
 import { NumberFilter } from "./Filters/NumberFilter";
 import { LabeledIdFilter } from "./Filters/LabeledIdFilter";
 import { HierarchicalLabelValueFilter } from "./Filters/HierarchicalLabelValueFilter";
@@ -224,6 +226,11 @@ const GenericCriterionEditor: React.FC<IGenericCriterionEditor> = ({
     if (criterion instanceof DurationCriterion) {
       return (
         <DurationFilter criterion={criterion} onValueChanged={onValueChanged} />
+      );
+    }
+    if (criterion instanceof FileSizeCriterion) {
+      return (
+        <FileSizeFilter criterion={criterion} onValueChanged={onValueChanged} />
       );
     }
     if (criterion instanceof DateCriterion) {

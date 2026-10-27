@@ -5,6 +5,7 @@ import {
   createDateCriterionOption,
   createMandatoryTimestampCriterionOption,
   createDurationCriterionOption,
+  createFileSizeCriterionOption,
 } from "./criteria/criterion";
 import { HasMarkersCriterionOption } from "./criteria/has-markers";
 import { SceneIsMissingCriterionOption } from "./criteria/is-missing";
@@ -143,6 +144,7 @@ const criterionOptions = [
   CaptionsCriterionOption,
   createMandatoryNumberCriterionOption("interactive_speed"),
   createMandatoryNumberCriterionOption("file_count"),
+  createFileSizeCriterionOption("file_size", "filesize"),
   createDateCriterionOption("date"),
   createDateCriterionOption("production_date"),
   createMandatoryTimestampCriterionOption("created_at"),

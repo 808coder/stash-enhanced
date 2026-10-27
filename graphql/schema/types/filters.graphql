@@ -280,6 +280,8 @@ input SceneFilterType {
   path: StringCriterionInput
   "Filter by file count"
   file_count: IntCriterionInput
+  "Filter by file size in bytes. Matches if any of the scene's files match"
+  file_size: Int64CriterionInput
   # rating expressed as 1-100
   rating100: IntCriterionInput
   "Filter by organized"
@@ -913,6 +915,12 @@ input StringCriterionInput {
 input IntCriterionInput {
   value: Int!
   value2: Int
+  modifier: CriterionModifier!
+}
+
+input Int64CriterionInput {
+  value: Int64!
+  value2: Int64
   modifier: CriterionModifier!
 }
 

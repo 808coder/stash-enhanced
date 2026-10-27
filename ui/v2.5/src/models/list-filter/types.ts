@@ -208,6 +208,7 @@ export type CriterionType =
   | "duplicated"
   | "ignore_auto_tag"
   | "file_count"
+  | "file_size"
   | "stash_id_endpoint"
   | "stash_id_count"
   | "date"

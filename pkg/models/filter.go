@@ -130,6 +130,20 @@ func (i IntCriterionInput) ValidModifier() bool {
 	return false
 }
 
+type Int64CriterionInput struct {
+	Value    int64             `json:"value"`
+	Value2   *int64            `json:"value2"`
+	Modifier CriterionModifier `json:"modifier"`
+}
+
+func (i Int64CriterionInput) ValidModifier() bool {
+	switch i.Modifier {
+	case CriterionModifierEquals, CriterionModifierNotEquals, CriterionModifierGreaterThan, CriterionModifierLessThan, CriterionModifierBetween, CriterionModifierNotBetween:
+		return true
+	}
+	return false
+}
+
 type HierarchicalCountInput struct {
 	Value    int               `json:"value"`
 	Value2   *int              `json:"value2"`
