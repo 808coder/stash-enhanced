@@ -12,6 +12,10 @@ Default five triage labels (`needs-triage`, `needs-info`, `ready-for-agent`, `re
 
 Single-context: `GLOSSARY.md` and `docs/adr/` at the repo root. See `docs/agents/domain.md`.
 
+## Git conventions
+
+Conventional Commits for commits, PR titles, branch names and issue titles; squash merge into `develop`, merge commits only for upstream merges. See `docs/agents/git-conventions.md`.
+
 ## Architecture
 
 See `docs/ARCHITECTURE.md` for the backend layering, GraphQL request flow, and frontend structure. Read it before changing resolvers, repositories, or migrations.

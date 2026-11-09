@@ -1,0 +1,94 @@
+# Validates PR titles against Conventional Commits and labels the PR by type.
+# The labels drive the release note categories in .github/release.yml.
+# See docs/agents/git-conventions.md.
+name: PR Title
+
+on:
+  pull_request:
+    types: [ opened, edited, reopened, synchronize ]
+    branches:
+      - develop
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  pull-requests: write
+
+jobs:
+  pr-title:
+    runs-on: ubuntu-24.04
+    steps:
+    - name: Validate title
+      uses: amannn/action-semantic-pull-request@v6.1.1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        # Keep in sync with docs/agents/git-conventions.md.
+        types: |
+          feat
+          fix
+          docs
+          style
+          refactor
+          perf
+          test
+          build
+          ci
+          chore
+          revert
+        scopes: |
+          ui
+          api
+          db
+          scan
+          autotag
+          video
+          scraper
+          plugin
+          config
+          agent
+          ci
+          docker
+          deps
+          upstream
+        requireScope: false
+        subjectPattern: ^[a-z].*[^.]$
+        subjectPatternError: |
+          The subject "{subject}" of the PR title "{title}" must start with a
+          lowercase letter and must not end with a period.
+
+    # Labels from fork PRs fail here, because their token is read-only.
+    # This fork only takes PRs from its own branches.
+    - name: Label by type
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        TITLE: ${{ github.event.pull_request.title }}
+        PR: ${{ github.event.pull_request.number }}
+      run: |
+        re='^([a-z]+)(\([a-z]+\))?(!)?: '
+        [[ $TITLE =~ $re ]] || exit 1
+        type=${BASH_REMATCH[1]}
+        breaking=${BASH_REMATCH[3]}
+
+        case $type in
+          feat) label=enhancement ;;
+          fix)  label=bug ;;
+          docs) label=documentation ;;
+          *)    label=$type ;;
+        esac
+
+        # Drop type labels from an earlier title, so an edited title relabels the PR.
+        all="enhancement bug documentation style refactor perf test build ci chore revert breaking"
+        current=$(gh pr view "$PR" -R "$GITHUB_REPOSITORY" --json labels --jq '.labels[].name')
+        for l in $all; do
+          if grep -qx "$l" <<<"$current" && [[ $l != "$label" && ( $l != breaking || -z $breaking ) ]]; then
+            gh pr edit "$PR" -R "$GITHUB_REPOSITORY" --remove-label "$l"
+          fi
+        done
+
+        gh pr edit "$PR" -R "$GITHUB_REPOSITORY" --add-label "$label"
+        if [[ -n $breaking ]]; then
+          gh pr edit "$PR" -R "$GITHUB_REPOSITORY" --add-label breaking
+        fi
