@@ -14,9 +14,15 @@ When a skill mentions a role (e.g. "apply the AFK-ready triage label"), use the 
 
 ## Additional labels
 
-| Label     | Meaning                                                                                              |
-| --------- | ---------------------------------------------------------------------------------------------------- |
-| `backlog` | Parked for later. Not planned for now, but not `wontfix`. Agents must not pick up `backlog` issues. |
+| Label     | Meaning                                                                          |
+| --------- | -------------------------------------------------------------------------------- |
+| `backlog` | Parked for later. Not implemented for now, but not rejected like `wontfix`.      |
+
+Use `backlog` for issues that were deliberately postponed. Issues labeled `backlog` are not implemented for now: agents and humans must not pick them up.
+
+A `backlog` issue carries no `ready-for-agent` or `ready-for-human` label. To resume work, remove `backlog` and set the fitting triage label again, usually `ready-for-agent`.
+
+To hide parked issues in the GitHub UI, filter with `is:issue is:open -label:backlog`.
 
 ## GitHub default labels
 
