@@ -12,6 +12,12 @@ The skills speak in terms of five canonical triage roles. This file maps those r
 
 When a skill mentions a role (e.g. "apply the AFK-ready triage label"), use the corresponding label string from this table.
 
+## Additional labels
+
+| Label     | Meaning                                                                                              |
+| --------- | ---------------------------------------------------------------------------------------------------- |
+| `backlog` | Parked for later. Not planned for now, but not `wontfix`. Agents must not pick up `backlog` issues. |
+
 ## GitHub default labels
 
 These also exist on the repo and can be used alongside the triage labels. They describe the kind of issue, while the triage labels describe its state.
