@@ -7,6 +7,7 @@ import { PerformerCard } from "src/components/Performers/PerformerCard";
 import { sortPerformers } from "src/core/performers";
 import { PhotographerLink } from "src/components/Shared/Link";
 import { CustomFields } from "src/components/Shared/CustomFields";
+import { CollapsibleDetails } from "src/components/Shared/CollapsibleDetails";
 
 interface IGalleryDetailProps {
   gallery: GQL.GalleryDataFragment;
@@ -16,18 +17,6 @@ export const GalleryDetailPanel: React.FC<IGalleryDetailProps> = ({
   gallery,
 }) => {
   const intl = useIntl();
-
-  function renderDetails() {
-    if (!gallery.details) return;
-    return (
-      <>
-        <h6>
-          <FormattedMessage id="details" />:{" "}
-        </h6>
-        <p className="pre">{gallery.details}</p>
-      </>
-    );
-  }
 
   function renderTags() {
     if (gallery.tags.length === 0) return;
@@ -106,7 +95,7 @@ export const GalleryDetailPanel: React.FC<IGalleryDetailProps> = ({
       </div>
       <div className="row">
         <div className="col-12">
-          {renderDetails()}
+          <CollapsibleDetails key={gallery.id} details={gallery.details} />
           {renderTags()}
           {renderPerformers()}
           <CustomFields values={gallery.custom_fields} fullWidth />

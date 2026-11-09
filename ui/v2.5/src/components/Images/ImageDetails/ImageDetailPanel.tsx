@@ -8,6 +8,7 @@ import { FormattedMessage, useIntl } from "react-intl";
 import { PhotographerLink } from "src/components/Shared/Link";
 import { PatchComponent } from "../../../patch";
 import { CustomFields } from "src/components/Shared/CustomFields";
+import { CollapsibleDetails } from "src/components/Shared/CollapsibleDetails";
 interface IImageDetailProps {
   image: GQL.ImageDataFragment;
 }
@@ -16,18 +17,6 @@ export const ImageDetailPanel: React.FC<IImageDetailProps> = PatchComponent(
   "ImageDetailPanel",
   (props) => {
     const intl = useIntl();
-
-    function renderDetails() {
-      if (!props.image.details) return;
-      return (
-        <>
-          <h6>
-            <FormattedMessage id="details" />:{" "}
-          </h6>
-          <p className="pre">{props.image.details}</p>
-        </>
-      );
-    }
 
     function renderTags() {
       if (props.image.tags.length === 0) return;
@@ -130,7 +119,10 @@ export const ImageDetailPanel: React.FC<IImageDetailProps> = PatchComponent(
         </div>
         <div className="row">
           <div className="col-12">
-            {renderDetails()}
+            <CollapsibleDetails
+              key={props.image.id}
+              details={props.image.details}
+            />
             {renderTags()}
             {renderPerformers()}
             <CustomFields values={props.image.custom_fields} fullWidth />
