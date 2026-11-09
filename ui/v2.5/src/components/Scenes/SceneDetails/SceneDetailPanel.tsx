@@ -4,8 +4,7 @@ import * as GQL from "src/core/generated-graphql";
 import TextUtils from "src/utils/text";
 import { sceneAgeFromDate } from "src/utils/scene";
 import { TagLink } from "src/components/Shared/TagLink";
-import { PerformerCard } from "src/components/Performers/PerformerCard";
-import { sortPerformers } from "src/core/performers";
+import { DetailPanelPerformers } from "src/components/Shared/DetailPanelPerformers";
 import { DirectorLink } from "src/components/Shared/Link";
 import { CustomFields } from "src/components/Shared/CustomFields";
 import { CollapsibleDetails } from "src/components/Shared/CollapsibleDetails";
@@ -47,33 +46,18 @@ export const SceneDetailPanel: React.FC<ISceneDetailProps> = (props) => {
 
   function renderPerformers() {
     if (props.scene.performers.length === 0) return;
-    const performers = sortPerformers(props.scene.performers);
-
     const ageFromDate = sceneAgeFromDate(
       props.scene.production_date,
       props.scene.date
     );
 
-    const cards = performers.map((performer) => (
-      <PerformerCard
-        key={performer.id}
-        performer={performer}
-        ageFromDate={ageFromDate}
-      />
-    ));
-
     return (
-      <>
-        <h6>
-          <FormattedMessage
-            id="countables.performers"
-            values={{ count: props.scene.performers.length }}
-          />
-        </h6>
-        <div className="row justify-content-center scene-performers">
-          {cards}
-        </div>
-      </>
+      <DetailPanelPerformers
+        key={`performers-${props.scene.id}`}
+        performers={props.scene.performers}
+        ageFromDate={ageFromDate}
+        className="scene-performers"
+      />
     );
   }
 
