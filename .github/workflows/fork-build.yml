@@ -258,10 +258,11 @@ jobs:
           org.opencontainers.image.revision=${{ github.sha }}
         cache-from: type=gha,scope=docker
 
-  # Job 5: GitHub releases (develop push -> latest_develop prerelease; v* release -> assets).
+  # Job 5: Attach assets to a published v* release.
+  # Don't create tags starting with "v" for anything other than real releases.
   release:
     needs: [test, build]
-    if: ${{ github.event_name != 'pull_request' }}
+    if: ${{ github.event_name == 'release' && startsWith(github.ref, 'refs/tags/v') }}
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -295,25 +296,8 @@ jobs:
         version="$(git describe --tags --exclude latest_develop)"
         echo "$version" | tee CHECKSUMS_SHA1
         (cd dist && sha1sum stash-*) | tee -a CHECKSUMS_SHA1
-        echo "STASH_VERSION=$version" >> "$GITHUB_ENV"
 
-    - name: Development release
-      if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/develop' }}
-      run: |
-        git tag -f latest_develop
-        git push -f origin refs/tags/latest_develop
-        read -ra files <<< "$RELEASE_FILES"
-        gh release delete latest_develop --yes 2>/dev/null || true
-        gh release create latest_develop \
-          --prerelease \
-          --verify-tag \
-          --title "$STASH_VERSION: Latest development build" \
-          --notes "Automated build of \`develop\` at ${GITHUB_SHA::8}." \
-          "${files[@]}" dist/stash-ui.zip CHECKSUMS_SHA1
-
-    # Don't create tags starting with "v" for anything other than real releases.
-    - name: Versioned release
-      if: ${{ github.event_name == 'release' && startsWith(github.ref, 'refs/tags/v') }}
+    - name: Upload release assets
       run: |
         read -ra files <<< "$RELEASE_FILES"
         gh release upload "$GITHUB_REF_NAME" --clobber \

@@ -27,10 +27,12 @@ After every upstream merge, run `gh workflow list -R 808coder/stash-enhanced --a
 | Event | Build + test | Docker image | GitHub release |
 |---|---|---|---|
 | PR into `develop` | yes | built + smoke test, not pushed | none |
-| Push to `develop` | yes | built + smoke test, not pushed | `latest_develop` prerelease (tag force-moved) |
+| Push to `develop` | yes | built + smoke test, not pushed | none |
 | Release `v*` published | yes | `:latest` + `:<tag>` | assets uploaded to that release |
 
-Jobs: `generate` (Go codegen + UI), then `test` and `build` in parallel, then `docker` and `release`.
+Jobs: `generate` (Go codegen + UI), then `test` and `build` in parallel, then `docker` and `release` (releases only).
+
+Binaries from any run (including `develop` pushes) can be downloaded from the run's artifacts in the Actions tab for 1 day.
 
 `OFFICIAL_BUILD` is `true` for everything except PRs. `UPDATE_REPO` is `808coder/stash-enhanced`, so the built-in update check queries this fork's releases.
 
@@ -41,7 +43,7 @@ Jobs: `generate` (Go codegen + UI), then `test` and `build` in parallel, then `d
   ```bash
   git config remote.upstream.tagopt --no-tags
   ```
-- The version comes from `git describe --tags --exclude latest_develop`. Builds between releases look like `v0.32.0-enhanced.1-5-gabc1234`, which the app treats as a develop build (its update check uses the `latest_develop` release). Exact tags use `/releases/latest`.
+- The version comes from `git describe --tags --exclude latest_develop`. Builds between releases look like `v0.32.0-enhanced.1-5-gabc1234`. The app treats those as develop builds, whose update check looks for a `latest_develop` release. This fork doesn't publish one, so the update check only works for release builds (exact tags, which use `/releases/latest`).
 - Only tag `v*` for real releases.
 
 ## Cutting a release
