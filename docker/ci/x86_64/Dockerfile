@@ -10,10 +10,19 @@ RUN if [ "$TARGETPLATFORM" = "linux/arm/v6" ];   then BIN=stash-linux-arm32v6; \
     mv $BIN /stash
 
 FROM --platform=$TARGETPLATFORM alpine:latest AS app
+ARG TARGETPLATFORM
 COPY --from=binary /stash /usr/bin/
 
 RUN apk add --no-cache ca-certificates python3 py3-requests py3-requests-toolbelt py3-lxml py3-pip ffmpeg tzdata vips vips-tools vips-heif \
     && pip install --break-system-packages mechanicalsoup cloudscraper stashapp-tools
+
+# Intel VAAPI drivers for hardware transcoding (x86_64 only, not packaged for other architectures):
+# i965 (libva-intel-driver) for Intel up to Gen9, e.g. Ivy Bridge; iHD (intel-media-driver) for Broadwell and newer;
+# libva-utils provides `vainfo` for diagnostics.
+RUN if [ "$TARGETPLATFORM" = "linux/amd64" ]; then \
+      apk add --no-cache libva-intel-driver intel-media-driver libva-utils; \
+    fi
+
 ENV STASH_CONFIG_FILE=/root/.stash/config.yml
 
 # Basic build-time metadata as defined at https://github.com/opencontainers/image-spec/blob/main/annotations.md#pre-defined-annotation-keys
