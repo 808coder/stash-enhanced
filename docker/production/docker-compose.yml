@@ -2,7 +2,7 @@
 # APPDESCRIPTION=An organizer for your porn, written in Go
 services:
   stash:
-    image: stashapp/stash:latest
+    image: 808coder/stash-enhanced:latest
     container_name: stash
     restart: unless-stopped
     ## the container's port must be the same with the STASH_PORT in the environment section
@@ -10,6 +10,10 @@ services:
       - "9999:9999"
     ## If you intend to use stash's DLNA functionality uncomment the below network mode and comment out the above ports section
     # network_mode: host
+    ## Uncomment to pass the Intel/AMD GPU into the container for hardware transcoding (VAAPI)
+    ## The container runs as root, so no group_add is needed
+    # devices:
+    #   - /dev/dri:/dev/dri
     logging:
       driver: "json-file"
       options:
@@ -25,6 +29,12 @@ services:
       ## Set your timezone, e.g. America/New_York or Europe/Berlin
       ## see https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
       - TZ=Etc/UTC
+      ## Render node used for VAAPI. renderD128 is the default and the first GPU regardless of GPU generation;
+      ## only change it (e.g. to renderD129) if the host has multiple GPUs.
+      # - STASH_HW_DRI_DEVICE=/dev/dri/renderD128
+      ## Override only if libva picks the wrong driver:
+      ## i965 for Intel up to Gen9 (e.g. Ivy Bridge), iHD for Broadwell and newer.
+      # - LIBVA_DRIVER_NAME=i965
     volumes:
       ## Adjust below paths (the left part) to your liking.
       ## E.g. you can change ./config:/root/.stash to ./stash:/root/.stash
