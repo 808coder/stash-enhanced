@@ -18,6 +18,11 @@ export const GalleryDetailPanel: React.FC<IGalleryDetailProps> = ({
 }) => {
   const intl = useIntl();
 
+  function renderDetails() {
+    if (!gallery.details) return;
+    return <CollapsibleDetails key={gallery.id} details={gallery.details} />;
+  }
+
   function renderTags() {
     if (gallery.tags.length === 0) return;
     const tags = gallery.tags.map((tag) => (
@@ -95,7 +100,7 @@ export const GalleryDetailPanel: React.FC<IGalleryDetailProps> = ({
       </div>
       <div className="row">
         <div className="col-12">
-          <CollapsibleDetails key={gallery.id} details={gallery.details} />
+          {renderDetails()}
           {renderTags()}
           {renderPerformers()}
           <CustomFields values={gallery.custom_fields} fullWidth />

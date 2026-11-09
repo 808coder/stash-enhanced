@@ -17,6 +17,13 @@ interface ISceneDetailProps {
 export const SceneDetailPanel: React.FC<ISceneDetailProps> = (props) => {
   const intl = useIntl();
 
+  function renderDetails() {
+    if (!props.scene.details || props.scene.details === "") return;
+    return (
+      <CollapsibleDetails key={props.scene.id} details={props.scene.details} />
+    );
+  }
+
   function renderTags() {
     if (props.scene.tags.length === 0) return;
     const tags = props.scene.tags.map((tag) => (
@@ -105,10 +112,7 @@ export const SceneDetailPanel: React.FC<ISceneDetailProps> = (props) => {
       </div>
       <div className="row">
         <div className="col-12">
-          <CollapsibleDetails
-            key={props.scene.id}
-            details={props.scene.details}
-          />
+          {renderDetails()}
           {renderTags()}
           {renderPerformers()}
           <CustomFields values={props.scene.custom_fields} fullWidth />

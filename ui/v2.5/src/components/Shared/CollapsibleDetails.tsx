@@ -8,7 +8,7 @@ import {
 import { Icon } from "./Icon";
 
 interface ICollapsibleDetailsProps {
-  details?: string | null;
+  details: string;
 }
 
 // Details text of a detail panel, collapsible via its heading. Always starts
@@ -18,8 +18,6 @@ export const CollapsibleDetails: React.FC<ICollapsibleDetailsProps> = ({
   details,
 }) => {
   const [open, setOpen] = useState(true);
-
-  if (!details) return null;
 
   return (
     <>

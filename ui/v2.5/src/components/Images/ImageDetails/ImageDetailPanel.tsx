@@ -18,6 +18,16 @@ export const ImageDetailPanel: React.FC<IImageDetailProps> = PatchComponent(
   (props) => {
     const intl = useIntl();
 
+    function renderDetails() {
+      if (!props.image.details) return;
+      return (
+        <CollapsibleDetails
+          key={props.image.id}
+          details={props.image.details}
+        />
+      );
+    }
+
     function renderTags() {
       if (props.image.tags.length === 0) return;
       const tags = props.image.tags.map((tag) => (
@@ -119,10 +129,7 @@ export const ImageDetailPanel: React.FC<IImageDetailProps> = PatchComponent(
         </div>
         <div className="row">
           <div className="col-12">
-            <CollapsibleDetails
-              key={props.image.id}
-              details={props.image.details}
-            />
+            {renderDetails()}
             {renderTags()}
             {renderPerformers()}
             <CustomFields values={props.image.custom_fields} fullWidth />
