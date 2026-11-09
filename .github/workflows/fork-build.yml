@@ -192,8 +192,8 @@ jobs:
         path: ${{ matrix.artifact-paths }}
 
   # Job 4: Docker image.
-  # Always built and smoke-tested; pushed to Docker Hub only for develop pushes
-  # (:development) and published v* releases (:latest + :<tag>).
+  # Always built and smoke-tested; pushed to Docker Hub only for published
+  # v* releases (:latest + :<tag>).
   docker:
     needs: [test, build]
     runs-on: ubuntu-24.04
@@ -213,9 +213,7 @@ jobs:
       id: tags
       run: |
         tags=""
-        if [[ "$GITHUB_EVENT_NAME" == "push" && "$GITHUB_REF" == "refs/heads/develop" ]]; then
-          tags="$DOCKER_IMAGE:development"
-        elif [[ "$GITHUB_EVENT_NAME" == "release" && "$GITHUB_REF" == refs/tags/v* ]]; then
+        if [[ "$GITHUB_EVENT_NAME" == "release" && "$GITHUB_REF" == refs/tags/v* ]]; then
           tags="$DOCKER_IMAGE:latest,$DOCKER_IMAGE:$GITHUB_REF_NAME"
         fi
         echo "push=$([[ -n "$tags" ]] && echo true || echo false)" >> "$GITHUB_OUTPUT"

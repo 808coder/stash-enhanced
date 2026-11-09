@@ -27,7 +27,7 @@ After every upstream merge, run `gh workflow list -R 808coder/stash-enhanced --a
 | Event | Build + test | Docker image | GitHub release |
 |---|---|---|---|
 | PR into `develop` | yes | built + smoke test, not pushed | none |
-| Push to `develop` | yes | `808coder/stash-enhanced:development` | `latest_develop` prerelease (tag force-moved) |
+| Push to `develop` | yes | built + smoke test, not pushed | `latest_develop` prerelease (tag force-moved) |
 | Release `v*` published | yes | `:latest` + `:<tag>` | assets uploaded to that release |
 
 Jobs: `generate` (Go codegen + UI), then `test` and `build` in parallel, then `docker` and `release`.
