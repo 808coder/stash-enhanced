@@ -50,7 +50,7 @@ export const ImageDetailPanel: React.FC<IImageDetailProps> = PatchComponent(
       if (props.image.performers.length === 0) return;
       return (
         <DetailPanelPerformers
-          key={props.image.id}
+          key={`performers-${props.image.id}`}
           performers={props.image.performers}
           ageFromDate={props.image.date ?? undefined}
           className="image-performers"

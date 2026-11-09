@@ -50,7 +50,7 @@ export const GalleryDetailPanel: React.FC<IGalleryDetailProps> = ({
     if (gallery.performers.length === 0) return;
     return (
       <DetailPanelPerformers
-        key={gallery.id}
+        key={`performers-${gallery.id}`}
         performers={gallery.performers}
         ageFromDate={gallery.date ?? undefined}
         className="gallery-performers"

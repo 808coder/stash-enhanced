@@ -54,7 +54,7 @@ export const SceneDetailPanel: React.FC<ISceneDetailProps> = (props) => {
 
     return (
       <DetailPanelPerformers
-        key={props.scene.id}
+        key={`performers-${props.scene.id}`}
         performers={props.scene.performers}
         ageFromDate={ageFromDate}
         className="scene-performers"
