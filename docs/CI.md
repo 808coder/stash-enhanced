@@ -7,6 +7,7 @@ This fork builds, tests, releases and publishes Docker images with [`.github/wor
 | Workflow | File | State |
 |---|---|---|
 | Fork Build | `fork-build.yml` | active, the fork's pipeline |
+| PR Title | `pr-title.yml` | active, checks Conventional Commits PR titles and labels PRs by type, see [`agents/git-conventions.md`](agents/git-conventions.md) |
 | Lint (golangci-lint) | `golangci-lint.yml` | active, unchanged from upstream |
 | Build | `build.yml` | **disabled**, upstream pipeline |
 | Compiler Build | `build-compiler.yml` | **disabled**, pushes to `ghcr.io/stashapp/compiler` (no access) |
@@ -55,7 +56,7 @@ git push origin v0.32.0-enhanced.2
 gh release create v0.32.0-enhanced.2 --generate-notes --verify-tag -R 808coder/stash-enhanced
 ```
 
-Release notes are generated from PR labels via [`.github/release.yml`](../.github/release.yml).
+Release notes are generated from PR labels via [`.github/release.yml`](../.github/release.yml). `pr-title.yml` sets those labels from the PR title's Conventional Commits type, so the notes are grouped into Breaking Changes, Features, Bug Fixes, Performance, Refactoring, Documentation and Other Changes; `ci`, `test` and `style` PRs are left out.
 
 A `release` event runs the workflow **from the tagged commit**, so the tag must point at a commit that already contains `fork-build.yml`.
 

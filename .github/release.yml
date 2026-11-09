@@ -1,20 +1,32 @@
+# Release note categories for `gh release create --generate-notes`.
+# Labels are set from the Conventional Commits type of the PR title by
+# .github/workflows/pr-title.yml. See docs/agents/git-conventions.md.
 changelog:
   exclude:
     labels:
       - skip-changelog
+      - ci
+      - test
+      - style
   categories:
+    - title: "⚠️ Breaking Changes"
+      labels:
+        - breaking
     - title: "🚀 Features"
       labels:
-        - feature
         - enhancement
     - title: "🐛 Bug Fixes"
       labels:
         - bug
-        - fix
-    - title: "🔧 Improvements"
+    - title: "⚡ Performance"
       labels:
-        - improvement
+        - perf
+    - title: "🔧 Refactoring"
+      labels:
         - refactor
+    - title: "📝 Documentation"
+      labels:
+        - documentation
     - title: "📦 Other Changes"
       labels:
         - "*"
