@@ -1,6 +1,6 @@
 # Triage Labels
 
-The skills speak in terms of five canonical triage roles. This file maps those roles to the actual label strings used in this repo's issue tracker. All five use the default names.
+The skills speak in terms of five canonical triage roles. This file maps those roles to the actual label strings used in this repo's issue tracker. All five use the default names. See [Additional labels](#additional-labels) for labels beyond these.
 
 | Label in mattpocock/skills | Label in our tracker | Meaning                                  |
 | -------------------------- | -------------------- | ---------------------------------------- |
@@ -11,6 +11,18 @@ The skills speak in terms of five canonical triage roles. This file maps those r
 | `wontfix`                  | `wontfix`            | Will not be actioned                     |
 
 When a skill mentions a role (e.g. "apply the AFK-ready triage label"), use the corresponding label string from this table.
+
+## Additional labels
+
+| Label     | Meaning                                                                          |
+| --------- | -------------------------------------------------------------------------------- |
+| `backlog` | Parked for later. Not implemented for now, but not rejected like `wontfix`.      |
+
+Use `backlog` for issues that were deliberately postponed. Issues labeled `backlog` are not implemented for now: agents and humans must not pick them up.
+
+A `backlog` issue carries no `ready-for-agent` or `ready-for-human` label. To resume work, remove `backlog` and set the fitting triage label again, usually `ready-for-agent`.
+
+To hide parked issues in the GitHub UI, filter with `is:issue is:open -label:backlog`.
 
 ## GitHub default labels
 

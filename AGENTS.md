@@ -6,7 +6,7 @@ GitHub Issues in `808coder/stash-enhanced`, via `gh`. See `docs/agents/issue-tra
 
 ### Triage labels
 
-Default five triage labels (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`), plus the GitHub default labels. See `docs/agents/triage-labels.md`.
+Default five triage labels (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`), plus `backlog` (parked issues that are not implemented for now) and the GitHub default labels. See `docs/agents/triage-labels.md`.
 
 ### Domain docs
 
