@@ -55,6 +55,11 @@ const FileInfoPanel: React.FC<IFileInfoPanelProps> = (
             <RevealInFilesystemButton fileId={props.file.id} />
           </span>
         </TextField>
+        <TextField id="filename">
+          <span className="text-break">
+            {TextUtils.fileNameFromPath(props.file.path)}
+          </span>
+        </TextField>
         <TextField id="filesize">
           <span className="text-truncate">
             <FileSize size={props.file.size} />
