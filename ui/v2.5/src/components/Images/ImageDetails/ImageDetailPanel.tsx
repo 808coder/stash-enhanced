@@ -2,8 +2,7 @@ import React from "react";
 import * as GQL from "src/core/generated-graphql";
 import TextUtils from "src/utils/text";
 import { GalleryLink, TagLink } from "src/components/Shared/TagLink";
-import { PerformerCard } from "src/components/Performers/PerformerCard";
-import { sortPerformers } from "src/core/performers";
+import { DetailPanelPerformers } from "src/components/Shared/DetailPanelPerformers";
 import { FormattedMessage, useIntl } from "react-intl";
 import { PhotographerLink } from "src/components/Shared/Link";
 import { PatchComponent } from "../../../patch";
@@ -43,32 +42,6 @@ export const ImageDetailPanel: React.FC<IImageDetailProps> = PatchComponent(
             />
           </h6>
           {tags}
-        </>
-      );
-    }
-
-    function renderPerformers() {
-      if (props.image.performers.length === 0) return;
-      const performers = sortPerformers(props.image.performers);
-      const cards = performers.map((performer) => (
-        <PerformerCard
-          key={performer.id}
-          performer={performer}
-          ageFromDate={props.image.date ?? undefined}
-        />
-      ));
-
-      return (
-        <>
-          <h6>
-            <FormattedMessage
-              id="countables.performers"
-              values={{ count: props.image.performers.length }}
-            />
-          </h6>
-          <div className="row justify-content-center image-performers">
-            {cards}
-          </div>
         </>
       );
     }
@@ -132,7 +105,12 @@ export const ImageDetailPanel: React.FC<IImageDetailProps> = PatchComponent(
           <div className="col-12">
             {renderDetails()}
             {renderTags()}
-            {renderPerformers()}
+            <DetailPanelPerformers
+              key={props.image.id}
+              performers={props.image.performers}
+              ageFromDate={props.image.date ?? undefined}
+              className="image-performers"
+            />
             <CustomFields values={props.image.custom_fields} fullWidth />
           </div>
         </div>

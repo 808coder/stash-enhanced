@@ -3,8 +3,7 @@ import { FormattedMessage, useIntl } from "react-intl";
 import * as GQL from "src/core/generated-graphql";
 import TextUtils from "src/utils/text";
 import { TagLink } from "src/components/Shared/TagLink";
-import { PerformerCard } from "src/components/Performers/PerformerCard";
-import { sortPerformers } from "src/core/performers";
+import { DetailPanelPerformers } from "src/components/Shared/DetailPanelPerformers";
 import { PhotographerLink } from "src/components/Shared/Link";
 import { CustomFields } from "src/components/Shared/CustomFields";
 
@@ -47,32 +46,6 @@ export const GalleryDetailPanel: React.FC<IGalleryDetailProps> = ({
     );
   }
 
-  function renderPerformers() {
-    if (gallery.performers.length === 0) return;
-    const performers = sortPerformers(gallery.performers);
-    const cards = performers.map((performer) => (
-      <PerformerCard
-        key={performer.id}
-        performer={performer}
-        ageFromDate={gallery.date ?? undefined}
-      />
-    ));
-
-    return (
-      <>
-        <h6>
-          <FormattedMessage
-            id="countables.performers"
-            values={{ count: gallery.performers.length }}
-          />
-        </h6>
-        <div className="row justify-content-center gallery-performers">
-          {cards}
-        </div>
-      </>
-    );
-  }
-
   // filename should use entire row if there is no studio
   const galleryDetailsWidth = gallery.studio ? "col-9" : "col-12";
 
@@ -108,7 +81,12 @@ export const GalleryDetailPanel: React.FC<IGalleryDetailProps> = ({
         <div className="col-12">
           {renderDetails()}
           {renderTags()}
-          {renderPerformers()}
+          <DetailPanelPerformers
+            key={gallery.id}
+            performers={gallery.performers}
+            ageFromDate={gallery.date ?? undefined}
+            className="gallery-performers"
+          />
           <CustomFields values={gallery.custom_fields} fullWidth />
         </div>
       </div>
