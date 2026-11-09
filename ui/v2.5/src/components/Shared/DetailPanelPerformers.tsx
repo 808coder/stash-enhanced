@@ -27,8 +27,6 @@ export const DetailPanelPerformers: React.FC<IDetailPanelPerformersProps> = ({
 }) => {
   const [hideMale, setHideMale] = useState(false);
 
-  if (performers.length === 0) return null;
-
   const maleCount = performers.filter(isMale).length;
   const hiding = hideMale && maleCount > 0;
   const visible = sortPerformers(

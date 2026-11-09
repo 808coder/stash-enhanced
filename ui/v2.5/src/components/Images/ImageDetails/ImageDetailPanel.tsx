@@ -46,6 +46,18 @@ export const ImageDetailPanel: React.FC<IImageDetailProps> = PatchComponent(
       );
     }
 
+    function renderPerformers() {
+      if (props.image.performers.length === 0) return;
+      return (
+        <DetailPanelPerformers
+          key={props.image.id}
+          performers={props.image.performers}
+          ageFromDate={props.image.date ?? undefined}
+          className="image-performers"
+        />
+      );
+    }
+
     function renderGalleries() {
       if (props.image.galleries.length === 0) return;
       const galleries = props.image.galleries.map((gallery) => (
@@ -105,12 +117,7 @@ export const ImageDetailPanel: React.FC<IImageDetailProps> = PatchComponent(
           <div className="col-12">
             {renderDetails()}
             {renderTags()}
-            <DetailPanelPerformers
-              key={props.image.id}
-              performers={props.image.performers}
-              ageFromDate={props.image.date ?? undefined}
-              className="image-performers"
-            />
+            {renderPerformers()}
             <CustomFields values={props.image.custom_fields} fullWidth />
           </div>
         </div>

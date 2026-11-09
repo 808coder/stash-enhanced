@@ -45,6 +45,23 @@ export const SceneDetailPanel: React.FC<ISceneDetailProps> = (props) => {
     );
   }
 
+  function renderPerformers() {
+    if (props.scene.performers.length === 0) return;
+    const ageFromDate = sceneAgeFromDate(
+      props.scene.production_date,
+      props.scene.date
+    );
+
+    return (
+      <DetailPanelPerformers
+        key={props.scene.id}
+        performers={props.scene.performers}
+        ageFromDate={ageFromDate}
+        className="scene-performers"
+      />
+    );
+  }
+
   // filename should use entire row if there is no studio
   const sceneDetailsWidth = props.scene.studio ? "col-9" : "col-12";
 
@@ -85,15 +102,7 @@ export const SceneDetailPanel: React.FC<ISceneDetailProps> = (props) => {
         <div className="col-12">
           {renderDetails()}
           {renderTags()}
-          <DetailPanelPerformers
-            key={props.scene.id}
-            performers={props.scene.performers}
-            ageFromDate={sceneAgeFromDate(
-              props.scene.production_date,
-              props.scene.date
-            )}
-            className="scene-performers"
-          />
+          {renderPerformers()}
           <CustomFields values={props.scene.custom_fields} fullWidth />
         </div>
       </div>

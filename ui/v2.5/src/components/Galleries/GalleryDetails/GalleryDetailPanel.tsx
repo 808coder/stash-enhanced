@@ -46,6 +46,18 @@ export const GalleryDetailPanel: React.FC<IGalleryDetailProps> = ({
     );
   }
 
+  function renderPerformers() {
+    if (gallery.performers.length === 0) return;
+    return (
+      <DetailPanelPerformers
+        key={gallery.id}
+        performers={gallery.performers}
+        ageFromDate={gallery.date ?? undefined}
+        className="gallery-performers"
+      />
+    );
+  }
+
   // filename should use entire row if there is no studio
   const galleryDetailsWidth = gallery.studio ? "col-9" : "col-12";
 
@@ -81,12 +93,7 @@ export const GalleryDetailPanel: React.FC<IGalleryDetailProps> = ({
         <div className="col-12">
           {renderDetails()}
           {renderTags()}
-          <DetailPanelPerformers
-            key={gallery.id}
-            performers={gallery.performers}
-            ageFromDate={gallery.date ?? undefined}
-            className="gallery-performers"
-          />
+          {renderPerformers()}
           <CustomFields values={gallery.custom_fields} fullWidth />
         </div>
       </div>
