@@ -20,7 +20,12 @@ export const GalleryDetailPanel: React.FC<IGalleryDetailProps> = ({
 
   function renderDetails() {
     if (!gallery.details) return;
-    return <CollapsibleDetails key={gallery.id} details={gallery.details} />;
+    return (
+      <CollapsibleDetails
+        key={`details-${gallery.id}`}
+        details={gallery.details}
+      />
+    );
   }
 
   function renderTags() {

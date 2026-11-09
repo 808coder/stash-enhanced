@@ -20,7 +20,10 @@ export const SceneDetailPanel: React.FC<ISceneDetailProps> = (props) => {
   function renderDetails() {
     if (!props.scene.details || props.scene.details === "") return;
     return (
-      <CollapsibleDetails key={props.scene.id} details={props.scene.details} />
+      <CollapsibleDetails
+        key={`details-${props.scene.id}`}
+        details={props.scene.details}
+      />
     );
   }
 

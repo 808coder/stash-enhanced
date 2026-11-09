@@ -22,7 +22,7 @@ export const ImageDetailPanel: React.FC<IImageDetailProps> = PatchComponent(
       if (!props.image.details) return;
       return (
         <CollapsibleDetails
-          key={props.image.id}
+          key={`details-${props.image.id}`}
           details={props.image.details}
         />
       );
