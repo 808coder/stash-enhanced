@@ -8,6 +8,7 @@ import { PerformerCard } from "src/components/Performers/PerformerCard";
 import { sortPerformers } from "src/core/performers";
 import { DirectorLink } from "src/components/Shared/Link";
 import { CustomFields } from "src/components/Shared/CustomFields";
+import { CollapsibleDetails } from "src/components/Shared/CollapsibleDetails";
 
 interface ISceneDetailProps {
   scene: GQL.SceneDataFragment;
@@ -19,12 +20,10 @@ export const SceneDetailPanel: React.FC<ISceneDetailProps> = (props) => {
   function renderDetails() {
     if (!props.scene.details || props.scene.details === "") return;
     return (
-      <>
-        <h6>
-          <FormattedMessage id="details" />:{" "}
-        </h6>
-        <p className="pre">{props.scene.details}</p>
-      </>
+      <CollapsibleDetails
+        key={`details-${props.scene.id}`}
+        details={props.scene.details}
+      />
     );
   }
 

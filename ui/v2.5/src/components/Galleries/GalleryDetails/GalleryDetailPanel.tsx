@@ -7,6 +7,7 @@ import { PerformerCard } from "src/components/Performers/PerformerCard";
 import { sortPerformers } from "src/core/performers";
 import { PhotographerLink } from "src/components/Shared/Link";
 import { CustomFields } from "src/components/Shared/CustomFields";
+import { CollapsibleDetails } from "src/components/Shared/CollapsibleDetails";
 
 interface IGalleryDetailProps {
   gallery: GQL.GalleryDataFragment;
@@ -20,12 +21,10 @@ export const GalleryDetailPanel: React.FC<IGalleryDetailProps> = ({
   function renderDetails() {
     if (!gallery.details) return;
     return (
-      <>
-        <h6>
-          <FormattedMessage id="details" />:{" "}
-        </h6>
-        <p className="pre">{gallery.details}</p>
-      </>
+      <CollapsibleDetails
+        key={`details-${gallery.id}`}
+        details={gallery.details}
+      />
     );
   }
 
