@@ -15,3 +15,7 @@ Single-context: `GLOSSARY.md` and `docs/adr/` at the repo root. See `docs/agents
 ## Architecture
 
 See `docs/ARCHITECTURE.md` for the backend layering, GraphQL request flow, and frontend structure. Read it before changing resolvers, repositories, or migrations.
+
+## CI/CD
+
+See `docs/CI.md` for the fork's pipeline (`fork-build.yml`), release/versioning scheme, and which upstream workflows are disabled. Read it before touching `.github/workflows/` or cutting a release. `gh` defaults to upstream here: always pass `-R 808coder/stash-enhanced`.

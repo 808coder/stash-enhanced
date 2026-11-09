@@ -1,0 +1,324 @@
+# Fork CI/CD for 808coder/stash-enhanced. See docs/CI.md.
+#
+# Replaces the upstream build.yml / build-compiler.yml, which are kept
+# unchanged (to avoid merge conflicts) but disabled via `gh workflow disable`.
+name: Fork Build
+
+on:
+  push:
+    branches:
+      - develop
+  pull_request:
+    branches:
+      - develop
+  release:
+    types: [ published ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # Only used by matrix entries with `container: true` (cross-compiled targets).
+  COMPILER_IMAGE: ghcr.io/stashapp/compiler:14
+  DOCKER_IMAGE: 808coder/stash-enhanced
+  # Builds from develop and releases are this fork's official builds; PR builds are not.
+  OFFICIAL_BUILD: ${{ github.event_name != 'pull_request' }}
+  # Points the built-in update check at this fork's releases.
+  UPDATE_REPO: ${{ github.repository }}
+
+jobs:
+  # Job 1: Generate code and build UI.
+  # Produces artifacts (generated Go files + UI build) consumed by test and build jobs.
+  generate:
+    runs-on: ubuntu-24.04
+    steps:
+    - uses: actions/checkout@v6
+      with:
+        fetch-depth: 0
+        fetch-tags: true
+
+    - name: Setup Go
+      uses: actions/setup-go@v6
+      with:
+        go-version-file: 'go.mod'
+
+    # pnpm version is read from the packageManager field in package.json
+    - name: Install pnpm
+      uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061
+      with:
+        package_json_file: ui/v2.5/package.json
+
+    # ensure pnpm store path exists to fix post setup node.js error
+    # https://github.com/actions/setup-node/issues/1137#issuecomment-2508963254
+    - name: Ensure pnpm store path exists
+      run: mkdir -p "$( pnpm store path --silent )"
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v6
+      with:
+        node-version: '20'
+        cache: 'pnpm'
+        cache-dependency-path: ui/v2.5/pnpm-lock.yaml
+
+    - name: Install UI dependencies
+      run: make pre-ui
+
+    - name: Generate
+      run: make generate
+
+    - name: Cache UI build
+      uses: actions/cache@v5
+      id: cache-ui
+      with:
+        path: ui/v2.5/build
+        key: ${{ runner.os }}-ui-build-${{ hashFiles('ui/v2.5/pnpm-lock.yaml', 'ui/v2.5/public/**', 'ui/v2.5/src/**', 'graphql/**/*.graphql') }}
+
+    - name: Validate UI
+      # skip UI validation for pull requests if UI is unchanged
+      if: ${{ github.event_name != 'pull_request' || steps.cache-ui.outputs.cache-hit != 'true' }}
+      run: make validate-ui
+
+    - name: Build UI
+      # skip UI build for pull requests if UI is unchanged (UI was cached)
+      if: ${{ github.event_name != 'pull_request' || steps.cache-ui.outputs.cache-hit != 'true' }}
+      run: make ui
+
+    - name: Upload generated artifacts
+      uses: actions/upload-artifact@v7
+      with:
+        name: generated
+        retention-days: 1
+        path: |
+          internal/api/generated_exec.go
+          internal/api/generated_models.go
+          ui/v2.5/build/
+          ui/login/locales/
+
+  # Job 2: Integration tests (native Go + GCC for CGO/SQLite).
+  test:
+    needs: generate
+    runs-on: ubuntu-24.04
+    steps:
+    - uses: actions/checkout@v6
+
+    - name: Setup Go
+      uses: actions/setup-go@v6
+      with:
+        go-version-file: 'go.mod'
+
+    - name: Download generated artifacts
+      uses: actions/download-artifact@v8
+      with:
+        name: generated
+
+    - name: Test Backend
+      run: make it
+
+  # Job 3: Build binaries, one runner per platform.
+  #
+  # To add a platform, add a matrix entry (see the build-cc-* targets in the
+  # Makefile) and list its binary in the release job's RELEASE_FILES.
+  # - container: false -> built natively on the runner (host-arch only)
+  # - container: true  -> built inside $COMPILER_IMAGE (cross-compilers)
+  build:
+    needs: generate
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - platform: linux
+          make-target: build-cc-linux
+          container: false
+          artifact-paths: |
+            dist/stash-linux
+        # Example cross-compiled entry:
+        # - platform: windows
+        #   make-target: build-cc-windows
+        #   container: true
+        #   artifact-paths: |
+        #     dist/stash-win.exe
+
+    steps:
+    - uses: actions/checkout@v6
+      with:
+        fetch-depth: 0
+        fetch-tags: true
+
+    - name: Download generated artifacts
+      uses: actions/download-artifact@v8
+      with:
+        name: generated
+
+    # --- native build ---
+    - name: Setup Go
+      if: ${{ !matrix.container }}
+      uses: actions/setup-go@v6
+      with:
+        go-version-file: 'go.mod'
+
+    - name: Build (${{ matrix.platform }}, native)
+      if: ${{ !matrix.container }}
+      run: make ${{ matrix.make-target }}
+
+    # --- cross build in compiler container ---
+    - name: Cache Go build
+      if: ${{ matrix.container }}
+      uses: actions/cache@v5
+      with:
+        path: .go-cache
+        key: ${{ runner.os }}-go-cache-${{ matrix.platform }}-${{ hashFiles('go.mod', '**/go.sum') }}
+
+    - name: Build (${{ matrix.platform }}, container)
+      if: ${{ matrix.container }}
+      run: |
+        mkdir -p .go-cache
+        docker run --rm \
+          --mount type=bind,source="$(pwd)",target=/stash \
+          --mount type=bind,source="$(pwd)/.go-cache",target=/root/.cache/go-build \
+          --env OFFICIAL_BUILD --env UPDATE_REPO \
+          -w /stash "$COMPILER_IMAGE" \
+          /bin/bash -c "git config --global --add safe.directory /stash && make ${{ matrix.make-target }}"
+
+    - name: Upload build artifact
+      uses: actions/upload-artifact@v7
+      with:
+        name: build-${{ matrix.platform }}
+        retention-days: 1
+        path: ${{ matrix.artifact-paths }}
+
+  # Job 4: Docker image.
+  # Always built and smoke-tested; pushed to Docker Hub only for develop pushes
+  # (:development) and published v* releases (:latest + :<tag>).
+  docker:
+    needs: [test, build]
+    runs-on: ubuntu-24.04
+    steps:
+    - uses: actions/checkout@v6
+
+    - name: Download linux binary
+      uses: actions/download-artifact@v8
+      with:
+        name: build-linux
+        path: dist
+
+    - name: Prepare build context
+      run: chmod +x dist/stash-*
+
+    - name: Determine image tags
+      id: tags
+      run: |
+        tags=""
+        if [[ "$GITHUB_EVENT_NAME" == "push" && "$GITHUB_REF" == "refs/heads/develop" ]]; then
+          tags="$DOCKER_IMAGE:development"
+        elif [[ "$GITHUB_EVENT_NAME" == "release" && "$GITHUB_REF" == refs/tags/v* ]]; then
+          tags="$DOCKER_IMAGE:latest,$DOCKER_IMAGE:$GITHUB_REF_NAME"
+        fi
+        echo "push=$([[ -n "$tags" ]] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+        echo "tags=$tags" >> "$GITHUB_OUTPUT"
+
+    - uses: docker/setup-buildx-action@v3
+
+    - name: Build image for smoke test
+      uses: docker/build-push-action@v6
+      with:
+        context: dist
+        file: docker/ci/x86_64/Dockerfile
+        platforms: linux/amd64
+        load: true
+        tags: stash-enhanced:smoke
+        cache-from: type=gha,scope=docker
+        cache-to: type=gha,scope=docker,mode=max
+
+    - name: Smoke test
+      run: docker run --rm stash-enhanced:smoke stash --version
+
+    - name: Log in to Docker Hub
+      if: ${{ steps.tags.outputs.push == 'true' }}
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+    - name: Push image
+      if: ${{ steps.tags.outputs.push == 'true' }}
+      uses: docker/build-push-action@v6
+      with:
+        context: dist
+        file: docker/ci/x86_64/Dockerfile
+        # add more platforms here once their binaries are built (see build matrix)
+        platforms: linux/amd64
+        push: true
+        tags: ${{ steps.tags.outputs.tags }}
+        labels: |
+          org.opencontainers.image.title=Stash Enhanced
+          org.opencontainers.image.source=https://github.com/${{ github.repository }}
+          org.opencontainers.image.revision=${{ github.sha }}
+        cache-from: type=gha,scope=docker
+
+  # Job 5: GitHub releases (develop push -> latest_develop prerelease; v* release -> assets).
+  release:
+    needs: [test, build]
+    if: ${{ github.event_name != 'pull_request' }}
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      # binaries from the build matrix; extend when adding platforms
+      RELEASE_FILES: dist/stash-linux
+    steps:
+    - uses: actions/checkout@v6
+      with:
+        fetch-depth: 0
+        fetch-tags: true
+
+    - name: Download all build artifacts
+      uses: actions/download-artifact@v8
+      with:
+        path: artifacts
+
+    # upload-artifact strips the common dist/ prefix, so files are at the artifact root
+    - name: Collect binaries
+      run: |
+        mkdir -p dist
+        cp artifacts/build-*/* dist/
+        chmod +x dist/*
+
+    - name: Zip UI
+      run: cd artifacts/generated/ui/v2.5/build && zip -r "$GITHUB_WORKSPACE/dist/stash-ui.zip" .
+
+    - name: Generate checksums
+      run: |
+        version="$(git describe --tags --exclude latest_develop)"
+        echo "$version" | tee CHECKSUMS_SHA1
+        (cd dist && sha1sum stash-*) | tee -a CHECKSUMS_SHA1
+        echo "STASH_VERSION=$version" >> "$GITHUB_ENV"
+
+    - name: Development release
+      if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/develop' }}
+      run: |
+        git tag -f latest_develop
+        git push -f origin refs/tags/latest_develop
+        read -ra files <<< "$RELEASE_FILES"
+        gh release delete latest_develop --yes 2>/dev/null || true
+        gh release create latest_develop \
+          --prerelease \
+          --verify-tag \
+          --title "$STASH_VERSION: Latest development build" \
+          --notes "Automated build of \`develop\` at ${GITHUB_SHA::8}." \
+          "${files[@]}" dist/stash-ui.zip CHECKSUMS_SHA1
+
+    # Don't create tags starting with "v" for anything other than real releases.
+    - name: Versioned release
+      if: ${{ github.event_name == 'release' && startsWith(github.ref, 'refs/tags/v') }}
+      run: |
+        read -ra files <<< "$RELEASE_FILES"
+        gh release upload "$GITHUB_REF_NAME" --clobber \
+          "${files[@]}" dist/stash-ui.zip CHECKSUMS_SHA1
+        # the update check uses /releases/latest, which skips prereleases
+        gh release edit "$GITHUB_REF_NAME" --prerelease=false --latest
