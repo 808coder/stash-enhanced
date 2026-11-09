@@ -48,6 +48,13 @@ const FileInfoPanel: React.FC<IFileInfoPanelProps> = (
             />
           </span>
         </TextField>
+        {!props.folder && props.file && (
+          <TextField id="filename">
+            <span className="text-break">
+              {TextUtils.fileNameFromPath(props.file.path)}
+            </span>
+          </TextField>
+        )}
         {props.file && (
           <TextField id="file_mod_time">
             <FormattedTime
