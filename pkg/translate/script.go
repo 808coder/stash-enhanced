@@ -148,3 +148,28 @@ func DetectLanguage(text string, candidates []string) (string, error) {
 	}
 	return matches[0], nil
 }
+
+// SourceScriptShare returns the share of letters in text that are written in
+// a script of the language, from 0 to 1. Text without letters returns 0.
+func SourceScriptShare(text, lang string) float64 {
+	scripts := make(map[script]bool)
+	for _, s := range languageScripts[baseLanguage(lang)] {
+		scripts[s] = true
+	}
+
+	var letters, inScript int
+	for _, r := range text {
+		if !unicode.IsLetter(r) {
+			continue
+		}
+		letters++
+		if s, ok := runeScript(r); ok && scripts[s] {
+			inScript++
+		}
+	}
+
+	if letters == 0 {
+		return 0
+	}
+	return float64(inScript) / float64(letters)
+}

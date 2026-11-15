@@ -48,3 +48,17 @@ func TestIsDetectableLanguage(t *testing.T) {
 		assert.False(t, IsDetectableLanguage(c), c)
 	}
 }
+
+func TestSourceScriptShare(t *testing.T) {
+	assert.Equal(t, 1.0, SourceScriptShare("ある夏の日", "ja"))
+	assert.Equal(t, 0.0, SourceScriptShare("A Summer Day", "ja"))
+	assert.Equal(t, 0.0, SourceScriptShare("", "ja"))
+	assert.Equal(t, 0.0, SourceScriptShare("123 !?", "ja"))
+	assert.Equal(t, 0.0, SourceScriptShare("ある夏の日", "en"))
+
+	// a translation with a leftover word is mostly latin
+	assert.Less(t, SourceScriptShare("A温泉 trip with my beloved mother", "ja"), 0.5)
+	// a new title with a product code is mostly japanese
+	assert.Greater(t, SourceScriptShare("SSIS-123 ある夏の日の思い出", "ja"), 0.5)
+	assert.Greater(t, SourceScriptShare("Летний день", "ru"), 0.99)
+}
