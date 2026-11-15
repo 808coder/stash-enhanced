@@ -69,6 +69,8 @@ func TranslateAndApply(ctx context.Context, r models.Repository, tr translate.Tr
 		return nil, err
 	}
 
+	LogApplied(t)
+
 	if hooks != nil {
 		hooks.ExecuteSceneUpdatePostHooks(ctx, *hookInput, fields)
 	}
@@ -169,15 +171,11 @@ func (j *Job) Execute(ctx context.Context, progress Progress) (*Summary, error) 
 			if sceneErr != nil {
 				return
 			}
-			for _, w := range t.Warnings {
-				logger.Warnf("Translating scene %d: %s", id, w)
-			}
 			if t.Empty() {
 				summary.Skipped++
 				return
 			}
 			summary.Translated++
-			logger.Infof("Translated scene %d from %s", id, t.SourceLanguage())
 		})
 		progress.Increment()
 

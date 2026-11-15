@@ -133,6 +133,7 @@ func (r *mutationResolver) SceneTranslateApply(ctx context.Context, input SceneT
 		return nil, err
 	}
 
+	translation.LogApplied(t)
 	sceneHooks{r}.ExecuteSceneUpdatePostHooks(ctx, *hookInput, fields)
 	return ret, nil
 }
@@ -144,8 +145,9 @@ func (r *mutationResolver) ScenesRestoreOriginal(ctx context.Context, ids []stri
 	}
 
 	type restored struct {
-		input  *models.SceneUpdateInput
-		fields []string
+		sceneID int
+		input   *models.SceneUpdateInput
+		fields  []string
 	}
 	var hooks []restored
 	var ret []*models.Scene
@@ -157,7 +159,7 @@ func (r *mutationResolver) ScenesRestoreOriginal(ctx context.Context, ids []stri
 				return fmt.Errorf("restoring scene %d: %w", id, err)
 			}
 			if input != nil {
-				hooks = append(hooks, restored{input, fields})
+				hooks = append(hooks, restored{id, input, fields})
 			}
 		}
 
@@ -169,6 +171,7 @@ func (r *mutationResolver) ScenesRestoreOriginal(ctx context.Context, ids []stri
 	}
 
 	for _, h := range hooks {
+		translation.LogRestored(h.sceneID)
 		sceneHooks{r}.ExecuteSceneUpdatePostHooks(ctx, *h.input, h.fields)
 	}
 	return ret, nil

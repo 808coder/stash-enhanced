@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/stashapp/stash/pkg/logger"
 	"github.com/stashapp/stash/pkg/models"
 	"github.com/stashapp/stash/pkg/translate"
 )
@@ -294,10 +295,12 @@ func Translate(ctx context.Context, r models.Repository, tr translate.Translator
 		if fp == nil {
 			return nil, nil
 		}
+		start := time.Now()
 		out, err := tr.Translate(ctx, []translate.Text{text}, fp.language, opts.TargetLanguage)
 		if err != nil {
 			return nil, err
 		}
+		logger.Debugf("Translated %s of scene %d from %s with %s in %s", text.Field, sceneID, fp.language, tr.Name(), time.Since(start).Round(time.Millisecond))
 		if l, _ := translate.DetectLanguage(out[0], []string{fp.language}); l != "" {
 			ret.Warnings = append(ret.Warnings, fmt.Sprintf("%s: translation still contains %s text", text.Field, fp.language))
 		}
@@ -318,7 +321,33 @@ func Translate(ctx context.Context, r models.Repository, tr translate.Translator
 		}
 	}
 
+	for _, w := range ret.Warnings {
+		logger.Warnf("Translating scene %d: %s", sceneID, w)
+	}
+	if ret.Empty() {
+		logger.Debugf("Translating scene %d: nothing to translate", sceneID)
+	}
+
 	return ret, nil
+}
+
+// LogApplied logs a saved translation. Call it after the transaction that
+// applied the translation was committed.
+func LogApplied(t *SceneTranslation) {
+	var fields []string
+	if t.Title != nil {
+		fields = append(fields, "title")
+	}
+	if t.Details != nil {
+		fields = append(fields, "details")
+	}
+	logger.Infof("Saved translation of scene %d (%s) from %s with %s", t.SceneID, strings.Join(fields, ", "), t.SourceLanguage(), t.Provider)
+}
+
+// LogRestored logs restored original metadata. Call it after the transaction
+// was committed.
+func LogRestored(sceneID int) {
+	logger.Infof("Restored original metadata of scene %d", sceneID)
 }
 
 // Apply saves a translation: the translations go into title and details, the
