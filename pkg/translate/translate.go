@@ -23,6 +23,11 @@ const (
 type Text struct {
 	Field Field
 	Value string
+	// Context is optional information that helps to understand Value but is
+	// not translated itself, e.g. the scene details and the known performer
+	// names when translating a title. Providers that cannot use context
+	// ignore it.
+	Context string
 }
 
 // Translator translates metadata text from one language to another.

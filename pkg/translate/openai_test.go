@@ -96,7 +96,23 @@ func TestOpenAI_Translate(t *testing.T) {
 	assert.Contains(t, b.Messages[1].Content, "Target language: en")
 	assert.Contains(t, b.Messages[1].Content, "<text>\nSSIS-123 ある夏の日\n</text>")
 
+	assert.NotContains(t, b.Messages[1].Content, "Context:")
+
 	assert.Contains(t, (*bodies)[1].Messages[1].Content, "Field: tag")
+}
+
+func TestUserMessage_Context(t *testing.T) {
+	got := userMessage(Text{
+		Field:   FieldTitle,
+		Value:   "ある夏の日",
+		Context: "Performers: Yua Mikami\nDetails: ...",
+	}, "ja", "en")
+
+	assert.Equal(t, "Field: title\nSource language: ja\nTarget language: en\n\nContext:\nPerformers: Yua Mikami\nDetails: ...\n\n<text>\nある夏の日\n</text>", got)
+
+	// blank context is left out
+	got = userMessage(Text{Field: FieldTag, Value: "x", Context: "  \n"}, "ja", "en")
+	assert.Equal(t, "Field: tag\nSource language: ja\nTarget language: en\n\n<text>\nx\n</text>", got)
 }
 
 func TestOpenAI_CustomPromptAndNoKey(t *testing.T) {
