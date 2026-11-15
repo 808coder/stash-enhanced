@@ -10,6 +10,8 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
+
+	"github.com/stashapp/stash/pkg/logger"
 )
 
 // DefaultSystemPrompt is used when no system prompt is configured. It is
@@ -132,11 +134,20 @@ type chatResponse struct {
 }
 
 func (t *OpenAI) translateOne(ctx context.Context, text Text, from, to string) (string, error) {
+	user := userMessage(text, from, to)
+	logger.TraceFunc(func() (string, []interface{}) {
+		prompt := "custom"
+		if t.cfg.SystemPrompt == DefaultSystemPrompt {
+			prompt = "default"
+		}
+		return "Translation request to %s (model %s, %s system prompt):\n%s", []interface{}{t.endpoint, t.cfg.Model, prompt, user}
+	})
+
 	payload, err := json.Marshal(chatRequest{
 		Model: t.cfg.Model,
 		Messages: []chatMessage{
 			{Role: "system", Content: t.cfg.SystemPrompt},
-			{Role: "user", Content: userMessage(text, from, to)},
+			{Role: "user", Content: user},
 		},
 		Temperature: 0.2,
 	})
@@ -167,7 +178,9 @@ func (t *OpenAI) translateOne(ctx context.Context, text Text, from, to string) (
 		return "", newError(ErrorKindResponse, "response has no choices: %s", snippet(body))
 	}
 
-	translated := cleanAnswer(resp.Choices[0].Message.Content)
+	raw := resp.Choices[0].Message.Content
+	translated := cleanAnswer(raw)
+	logger.Tracef("Translation answer from %s: %q, cleaned: %q", t.cfg.Model, raw, translated)
 	if translated == "" {
 		return "", newError(ErrorKindResponse, "empty translation")
 	}

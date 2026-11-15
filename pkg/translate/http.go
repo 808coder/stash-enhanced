@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"strconv"
 	"time"
+
+	"github.com/stashapp/stash/pkg/logger"
 )
 
 const (
@@ -90,7 +92,9 @@ func (p retryPolicy) do(ctx context.Context, client *http.Client, newReq func(ct
 			if attempt >= p.maxRetries {
 				return nil, newError(ErrorKindRateLimit, "HTTP %d after %d retries: %s", resp.StatusCode, attempt, snippet(body))
 			}
-			if err := p.sleep(ctx, p.delay(attempt, resp.Header.Get("Retry-After"))); err != nil {
+			d := p.delay(attempt, resp.Header.Get("Retry-After"))
+			logger.Tracef("Translation provider answered HTTP %d, retry %d of %d in %s", resp.StatusCode, attempt+1, p.maxRetries, d)
+			if err := p.sleep(ctx, d); err != nil {
 				return nil, err
 			}
 		default:

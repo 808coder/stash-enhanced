@@ -290,6 +290,11 @@ func Translate(ctx context.Context, r models.Repository, tr translate.Translator
 
 	p := planScene(*d, opts)
 	ret := &SceneTranslation{SceneID: sceneID, Provider: tr.Name(), Warnings: p.warnings}
+	logger.TraceFunc(func() (string, []interface{}) {
+		return "Translation plan for scene %d (languages %v, force %t): title: %s; details: %s", []interface{}{
+			sceneID, sceneLanguages(d.tagIDs, opts.LanguageMappings), opts.Force, describePlan(p.title), describePlan(p.details),
+		}
+	})
 
 	translateField := func(fp *fieldPlan, text translate.Text) (*FieldTranslation, error) {
 		if fp == nil {
@@ -329,6 +334,17 @@ func Translate(ctx context.Context, r models.Repository, tr translate.Translator
 	}
 
 	return ret, nil
+}
+
+func describePlan(fp *fieldPlan) string {
+	switch {
+	case fp == nil:
+		return "unchanged"
+	case fp.source == fp.current:
+		return fmt.Sprintf("translate %q from %s", fp.source, fp.language)
+	default:
+		return fmt.Sprintf("translate the original %q from %s (current %q)", fp.source, fp.language, fp.current)
+	}
 }
 
 // LogApplied logs a saved translation. Call it after the transaction that
@@ -387,6 +403,19 @@ func Apply(ctx context.Context, r models.Repository, t *SceneTranslation, now ti
 		fields = append(fields, "details")
 	}
 
+	logger.TraceFunc(func() (string, []interface{}) {
+		var changes []string
+		for _, f := range []struct {
+			name string
+			t    *FieldTranslation
+		}{{"title", t.Title}, {"details", t.Details}} {
+			if f.t != nil {
+				changes = append(changes, fmt.Sprintf("%s %q -> %q", f.name, f.t.Current, f.t.Translation))
+			}
+		}
+		return "Writing translation of scene %d: %s; custom fields %v", []interface{}{t.SceneID, strings.Join(changes, "; "), cf}
+	})
+
 	if _, err := r.Scene.UpdatePartial(ctx, t.SceneID, partial); err != nil {
 		return nil, nil, err
 	}
@@ -429,8 +458,20 @@ func Restore(ctx context.Context, r models.Repository, sceneID int) (*models.Sce
 	}
 
 	if len(fields) == 0 && len(remove) == 0 {
+		logger.Tracef("Restoring scene %d: no original metadata", sceneID)
 		return nil, nil, nil
 	}
+
+	logger.TraceFunc(func() (string, []interface{}) {
+		var changes []string
+		if partial.Title.Set {
+			changes = append(changes, fmt.Sprintf("title -> %q", partial.Title.Value))
+		}
+		if partial.Details.Set {
+			changes = append(changes, fmt.Sprintf("details -> %q", partial.Details.Value))
+		}
+		return "Restoring scene %d: %s; removing custom fields %v", []interface{}{sceneID, strings.Join(changes, "; "), remove}
+	})
 
 	if len(fields) > 0 {
 		if _, err := r.Scene.UpdatePartial(ctx, sceneID, partial); err != nil {
