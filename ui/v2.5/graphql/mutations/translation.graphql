@@ -1,0 +1,5 @@
+mutation ConfigureTranslation($input: ConfigTranslationInput!) {
+  configureTranslation(input: $input) {
+    ...ConfigTranslationData
+  }
+}

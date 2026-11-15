@@ -237,6 +237,9 @@ fragment ConfigData on ConfigResult {
   defaults {
     ...ConfigDefaultSettingsData
   }
+  translation {
+    ...ConfigTranslationData
+  }
   ui
   plugins
 }

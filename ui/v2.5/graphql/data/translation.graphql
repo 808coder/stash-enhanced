@@ -1,0 +1,16 @@
+fragment ConfigTranslationData on ConfigTranslationResult {
+  provider
+  targetLanguage
+  applyWithoutReview
+  languageMappings {
+    tagId
+    languageCode
+  }
+  openai {
+    baseURL
+    model
+    apiKey
+    systemPrompt
+  }
+  defaultSystemPrompt
+}

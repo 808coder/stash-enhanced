@@ -48,6 +48,7 @@ jobs:
           scraper
           plugin
           config
+          translate
           agent
           ci
           docker
