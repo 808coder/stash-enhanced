@@ -264,7 +264,18 @@ func (f *cleanFilter) shouldCleanImage(path string, stash *config.StashConfig) b
 	return false
 }
 
-type cleanHandler struct{}
+type cleanHandler struct {
+	// fs is used to tell files gone from disk from excluded ones.
+	fs         models.FS
+	tombstones scene.CleanTombstones
+}
+
+// isMissing reports whether f is gone from disk, as opposed to still present
+// but excluded from the library.
+func (h *cleanHandler) isMissing(f *models.VideoFile) bool {
+	info, err := f.Info(h.fs)
+	return err != nil || info == nil
+}
 
 func (h *cleanHandler) HandleFile(ctx context.Context, fileDeleter *file.Deleter, fileID models.FileID) error {
 	if err := h.handleRelatedScenes(ctx, fileDeleter, fileID); err != nil {
@@ -300,33 +311,45 @@ func (h *cleanHandler) handleRelatedScenes(ctx context.Context, fileDeleter *fil
 		Paths:          mgr.Paths,
 	}
 
-	// the file is gone from disk: record a clean Tombstone
-	destroyOpts := scene.DestroyOptions{
-		DeleteGenerated: true,
-		Tombstone:       &scene.TombstoneOptions{Origin: models.TombstoneOriginClean},
-	}
-
-	for _, scene := range scenes {
-		if err := scene.LoadFiles(ctx, sceneQB); err != nil {
+	for _, s := range scenes {
+		if err := s.LoadFiles(ctx, sceneQB); err != nil {
 			return err
 		}
 
+		// the file being cleaned; nil if it is not among the scene's files
+		var cleaned *models.VideoFile
+		for _, f := range s.Files.List() {
+			if f.ID == fileID {
+				cleaned = f
+			}
+		}
+		missing := cleaned == nil || h.isMissing(cleaned)
+
 		// only delete if the scene has no other files
-		if len(scene.Files.List()) <= 1 {
-			logger.Infof("Deleting scene %q since it has no other related files", scene.DisplayName())
-			if err := mgr.SceneService.Destroy(ctx, scene, sceneFileDeleter, destroyOpts); err != nil {
+		if len(s.Files.List()) <= 1 {
+			logger.Infof("Deleting scene %q since it has no other related files", s.DisplayName())
+			destroyOpts := scene.DestroyOptions{
+				DeleteGenerated: true,
+				// nil unless all of the scene's files are gone from disk
+				Tombstone: h.tombstones.ForDestroy(s.ID, missing),
+			}
+			if err := mgr.SceneService.Destroy(ctx, s, sceneFileDeleter, destroyOpts); err != nil {
 				return err
 			}
 
-			mgr.PluginCache.RegisterPostHooks(ctx, scene.ID, hook.SceneDestroyPost, plugin.SceneDestroyInput{
-				Checksum: scene.Checksum,
-				OSHash:   scene.OSHash,
-				Path:     scene.Path,
+			mgr.PluginCache.RegisterPostHooks(ctx, s.ID, hook.SceneDestroyPost, plugin.SceneDestroyInput{
+				Checksum: s.Checksum,
+				OSHash:   s.OSHash,
+				Path:     s.Path,
 			}, nil)
 		} else {
+			if cleaned != nil {
+				h.tombstones.FileRemoved(s.ID, cleaned, missing)
+			}
+
 			// set the primary file to a remaining file
 			var newPrimaryID models.FileID
-			for _, f := range scene.Files.List() {
+			for _, f := range s.Files.List() {
 				if f.ID != fileID {
 					newPrimaryID = f.ID
 					break
@@ -336,7 +359,7 @@ func (h *cleanHandler) handleRelatedScenes(ctx context.Context, fileDeleter *fil
 			scenePartial := models.NewScenePartial()
 			scenePartial.PrimaryFileID = &newPrimaryID
 
-			if _, err := mgr.Repository.Scene.UpdatePartial(ctx, scene.ID, scenePartial); err != nil {
+			if _, err := mgr.Repository.Scene.UpdatePartial(ctx, s.ID, scenePartial); err != nil {
 				return err
 			}
 		}

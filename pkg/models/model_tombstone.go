@@ -176,8 +176,9 @@ type TombstoneFile struct {
 	Phash *int64 `json:"phash"`
 }
 
-// TombstonePhashInput matches Tombstone files whose phash is within
-// Distance (inclusive) of Value.
+// TombstonePhashInput matches Tombstone files whose phash is less than
+// Distance apart from Value (exclusive, like the scene phash_distance
+// filter). Distance 0 matches the exact phash.
 type TombstonePhashInput struct {
 	Value    int64
 	Distance int

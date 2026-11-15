@@ -70,12 +70,20 @@ type ScanHandler struct {
 	FileNamingAlgorithm models.HashAlgorithm
 	Paths               *paths.Paths
 
-	// Tombstone handling. Skipped entirely when RecordTombstones is false
-	// or TombstoneStore is nil.
-	TombstoneStore         TombstoneFinderDestroyer
-	TombstoneTags          TombstoneTagFinderCreator
-	RecordTombstones       bool
-	PreviouslyDeletedTagID string
+	// Tombstones configures Tombstone handling for new scenes. nil skips it
+	// (the "Record tombstones" setting is off).
+	Tombstones *ScanTombstoneOptions
+}
+
+// ScanTombstoneOptions configures how a scan handles new scenes whose file
+// matches a Tombstone.
+type ScanTombstoneOptions struct {
+	Store TombstoneFinderDestroyer
+	Tags  TombstoneTagFinderCreator
+	// PreviouslyDeletedTagID is the tag added to scenes matching a manual
+	// Tombstone. 0, or a tag that no longer exists, falls back to a tag
+	// named "Previously deleted", created when missing.
+	PreviouslyDeletedTagID int
 }
 
 func (h *ScanHandler) validate() error {

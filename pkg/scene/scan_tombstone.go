@@ -3,7 +3,6 @@ package scene
 import (
 	"context"
 	"fmt"
-	"strconv"
 
 	"github.com/stashapp/stash/pkg/logger"
 	"github.com/stashapp/stash/pkg/models"
@@ -13,14 +12,15 @@ import (
 // Manual tombstones tag the new scene and are kept; clean tombstones are
 // removed without tagging. Must be called before the scene is created.
 func (h *ScanHandler) applyTombstones(ctx context.Context, newScene *models.Scene, f *models.VideoFile) error {
-	if !h.RecordTombstones || h.TombstoneStore == nil {
+	opts := h.Tombstones
+	if opts == nil {
 		return nil
 	}
 
 	oshash := f.Fingerprints.GetString(models.FingerprintTypeOshash)
 	md5 := f.Fingerprints.GetString(models.FingerprintTypeMD5)
 
-	tombstones, err := h.TombstoneStore.FindByFileFingerprints(ctx, oshash, md5)
+	tombstones, err := opts.Store.FindByFileFingerprints(ctx, oshash, md5)
 	if err != nil {
 		return fmt.Errorf("finding tombstones: %w", err)
 	}
@@ -31,7 +31,7 @@ func (h *ScanHandler) applyTombstones(ctx context.Context, newScene *models.Scen
 		case models.TombstoneOriginManual:
 			manual = true
 		case models.TombstoneOriginClean:
-			if err := h.TombstoneStore.Destroy(ctx, t.ID); err != nil {
+			if err := opts.Store.Destroy(ctx, t.ID); err != nil {
 				return fmt.Errorf("removing tombstone %d: %w", t.ID, err)
 			}
 		}
@@ -41,7 +41,7 @@ func (h *ScanHandler) applyTombstones(ctx context.Context, newScene *models.Scen
 		return nil
 	}
 
-	tagID, err := h.previouslyDeletedTagID(ctx)
+	tagID, err := opts.previouslyDeletedTagID(ctx)
 	if err != nil {
 		return err
 	}
@@ -52,21 +52,19 @@ func (h *ScanHandler) applyTombstones(ctx context.Context, newScene *models.Scen
 	return nil
 }
 
-func (h *ScanHandler) previouslyDeletedTagID(ctx context.Context) (int, error) {
-	if h.PreviouslyDeletedTagID != "" {
-		if id, err := strconv.Atoi(h.PreviouslyDeletedTagID); err == nil {
-			t, err := h.TombstoneTags.Find(ctx, id)
-			if err != nil {
-				return 0, fmt.Errorf("finding previously deleted tag: %w", err)
-			}
-			if t != nil {
-				return t.ID, nil
-			}
+func (o *ScanTombstoneOptions) previouslyDeletedTagID(ctx context.Context) (int, error) {
+	if o.PreviouslyDeletedTagID != 0 {
+		t, err := o.Tags.Find(ctx, o.PreviouslyDeletedTagID)
+		if err != nil {
+			return 0, fmt.Errorf("finding previously deleted tag: %w", err)
 		}
-		// configured tag invalid or missing: fall back to the default name
+		if t != nil {
+			return t.ID, nil
+		}
+		logger.Warnf("Previously deleted tag %d no longer exists, using %q", o.PreviouslyDeletedTagID, fallbackPreviouslyDeletedTagName)
 	}
 
-	t, err := h.TombstoneTags.FindByName(ctx, fallbackPreviouslyDeletedTagName, true)
+	t, err := o.Tags.FindByName(ctx, fallbackPreviouslyDeletedTagName, true)
 	if err != nil {
 		return 0, fmt.Errorf("finding previously deleted tag: %w", err)
 	}
@@ -76,7 +74,7 @@ func (h *ScanHandler) previouslyDeletedTagID(ctx context.Context) (int, error) {
 
 	newTag := models.NewTag()
 	newTag.Name = fallbackPreviouslyDeletedTagName
-	if err := h.TombstoneTags.Create(ctx, &models.CreateTagInput{Tag: &newTag}); err != nil {
+	if err := o.Tags.Create(ctx, &models.CreateTagInput{Tag: &newTag}); err != nil {
 		return 0, fmt.Errorf("creating previously deleted tag: %w", err)
 	}
 

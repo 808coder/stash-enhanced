@@ -282,9 +282,10 @@ func TestTombstoneStore_QuerySingleKey(t *testing.T) {
 			{"filename does not match extension", models.TombstoneFilter{Basename: "mkv"}, []tombstoneHit{}},
 			{"phash exact", models.TombstoneFilter{Phash: &models.TombstonePhashInput{Value: fixturePhashA, Distance: 0}},
 				[]tombstoneHit{{fx.a.ID, keys(models.TombstoneMatchKeyPhash)}}},
-			{"phash distance is inclusive", models.TombstoneFilter{Phash: &models.TombstonePhashInput{Value: fixturePhashA, Distance: 4}},
+			// like findScenes' phash_distance criterion, the distance is exclusive
+			{"phash within distance", models.TombstoneFilter{Phash: &models.TombstonePhashInput{Value: fixturePhashA, Distance: 5}},
 				[]tombstoneHit{{fx.b.ID, keys(models.TombstoneMatchKeyPhash)}, {fx.a.ID, keys(models.TombstoneMatchKeyPhash)}}},
-			{"phash outside distance", models.TombstoneFilter{Phash: &models.TombstonePhashInput{Value: fixturePhashB, Distance: 3}},
+			{"phash at distance is excluded", models.TombstoneFilter{Phash: &models.TombstonePhashInput{Value: fixturePhashB, Distance: 4}},
 				[]tombstoneHit{{fx.b.ID, keys(models.TombstoneMatchKeyPhash)}}},
 		}
 

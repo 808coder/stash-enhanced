@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime/debug"
+	"strconv"
 	"sync"
 	"time"
 
@@ -718,13 +719,35 @@ func getScanHandlers(options ScanMetadataInput, taskQueue *job.TaskQueue, progre
 				FileNamingAlgorithm: c.GetVideoFileNamingAlgorithm(),
 				Paths:               mgr.Paths,
 
-				TombstoneStore:         r.Tombstone,
-				TombstoneTags:          r.Tag,
-				RecordTombstones:       c.GetTombstonesRecord(),
-				PreviouslyDeletedTagID: c.GetTombstonesPreviouslyDeletedTagID(),
+				Tombstones: newScanTombstoneOptions(c, r),
 			},
 		},
 	}
+}
+
+// newScanTombstoneOptions returns the scene scan's Tombstone handling, or nil
+// when the "Record tombstones" setting is off. An invalid configured tag id
+// is logged and replaced by the "Previously deleted" fallback.
+func newScanTombstoneOptions(c *config.Config, r models.Repository) *scene.ScanTombstoneOptions {
+	if !c.GetTombstonesRecord() {
+		return nil
+	}
+
+	ret := &scene.ScanTombstoneOptions{
+		Store: r.Tombstone,
+		Tags:  r.Tag,
+	}
+
+	if s := c.GetTombstonesPreviouslyDeletedTagID(); s != "" {
+		id, err := strconv.Atoi(s)
+		if err != nil {
+			logger.Warnf("Invalid previously deleted tag id %q, using the default tag: %v", s, err)
+		} else {
+			ret.PreviouslyDeletedTagID = id
+		}
+	}
+
+	return ret
 }
 
 type imageGenerators struct {

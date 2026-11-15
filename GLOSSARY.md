@@ -36,5 +36,5 @@ One of the files listed under a Tombstone: its Filename, Path, quality data and 
 _Avoid_: deleted file
 
 **Origin**
-Why a Tombstone exists: `manual` (the user deleted the scene with its file) or `clean` (the Clean task removed the scene because its file was missing).
+Why a Tombstone exists: `MANUAL` (the user deleted the scene with its file) or `CLEAN` (the Clean task removed the scene because all of its files were gone from disk). Stored and exposed in GraphQL as these enum values.
 _Avoid_: source, type

@@ -269,3 +269,45 @@ func TestService_Destroy_noTombstone(t *testing.T) {
 		})
 	}
 }
+
+func TestService_Destroy_cleanTombstoneListsFilesRemovedEarlier(t *testing.T) {
+	db := mocks.NewDatabase()
+	var order []string
+	expectSnapshotReads(db)
+	expectRowRemoval(db, false, &order)
+
+	var created *models.Tombstone
+	db.Tombstone.On("Create", testCtx, mock.AnythingOfType("*models.Tombstone")).Run(func(args mock.Arguments) {
+		created = args.Get(1).(*models.Tombstone)
+	}).Return(nil).Once()
+
+	earlier := &models.VideoFile{
+		BaseFile: &models.BaseFile{
+			ID:       destroyFileID + 1,
+			Basename: "clip-part1.mp4",
+			Path:     "/videos/clip-part1.mp4",
+			Size:     500,
+			Fingerprints: models.Fingerprints{
+				{Type: models.FingerprintTypeOshash, Fingerprint: "oshash0"},
+			},
+		},
+		Duration: 6,
+	}
+
+	s := newDestroyService(db, true)
+	err := s.Destroy(testCtx, newDestroyScene(), newTestFileDeleter(), DestroyOptions{
+		Tombstone: &TombstoneOptions{Origin: models.TombstoneOriginClean, RemovedFiles: []*models.VideoFile{earlier}},
+	})
+
+	assert.NoError(t, err)
+	want := expectedTombstone(models.TombstoneOriginClean, "")
+	want.Files = append([]*models.TombstoneFile{{
+		Basename: "clip-part1.mp4",
+		Path:     "/videos/clip-part1.mp4",
+		Size:     500,
+		Duration: 6,
+		Oshash:   "oshash0",
+	}}, want.Files...)
+	assert.Equal(t, want, created)
+	db.AssertExpectations(t)
+}

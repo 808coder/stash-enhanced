@@ -472,9 +472,9 @@ func (r *mutationResolver) BulkSceneUpdate(ctx context.Context, input BulkSceneU
 // sceneDestroyOptions builds the options of a manual scene destroy. The scene
 // service decides whether the Tombstone is actually written.
 func sceneDestroyOptions(deleteGenerated, deleteFile, destroyFileEntry *bool, reason *string) scene.DestroyOptions {
-	var r string
+	var trimmedReason string
 	if reason != nil {
-		r = strings.TrimSpace(*reason)
+		trimmedReason = strings.TrimSpace(*reason)
 	}
 
 	return scene.DestroyOptions{
@@ -483,7 +483,7 @@ func sceneDestroyOptions(deleteGenerated, deleteFile, destroyFileEntry *bool, re
 		DestroyFileEntry: utils.IsTrue(destroyFileEntry),
 		Tombstone: &scene.TombstoneOptions{
 			Origin: models.TombstoneOriginManual,
-			Reason: r,
+			Reason: trimmedReason,
 		},
 	}
 }

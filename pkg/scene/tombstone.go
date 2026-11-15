@@ -7,23 +7,21 @@ import (
 	"github.com/stashapp/stash/pkg/models"
 )
 
-// Custom field keys holding the Original metadata of a translated scene.
-// See docs/adr/0001-original-metadata-in-custom-fields.md.
-const (
-	customFieldOriginalTitle   = "original_title"
-	customFieldOriginalDetails = "original_details"
-)
-
 // TombstoneOptions requests a Tombstone when a scene is destroyed.
 //
 // A Tombstone is only written while the "Record tombstones" setting is on.
 // A manual Tombstone is only written when the scene's files are deleted from
 // disk (DestroyOptions.DeleteFile); a clean Tombstone is always written,
-// since the Clean task only destroys scenes whose file is already gone.
+// since the Clean task only requests one for scenes whose files are gone
+// from disk (see CleanTombstones).
 type TombstoneOptions struct {
 	Origin models.TombstoneOrigin
 	// Reason is optional free text; empty means none.
 	Reason string
+	// RemovedFiles are files the scene had before, already removed from it
+	// (the Clean task removes a multi-file scene's files one at a time).
+	// They are listed in the Tombstone before the scene's current files.
+	RemovedFiles []*models.VideoFile
 }
 
 func (s *Service) shouldRecordTombstone(opts DestroyOptions) bool {
@@ -51,6 +49,7 @@ func (s *Service) recordTombstone(ctx context.Context, scene *models.Scene, opts
 
 	t.Origin = opts.Origin
 	t.Reason = opts.Reason
+	t.Files = append(removedTombstoneFiles(opts.RemovedFiles, scene), t.Files...)
 
 	return s.Tombstone.Create(ctx, t)
 }
@@ -94,8 +93,8 @@ func (s *Service) snapshot(ctx context.Context, scene *models.Scene) (*models.To
 		Date:            scene.Date,
 		URLs:            scene.URLs.List(),
 		StashIDs:        toTombstoneStashIDs(scene.StashIDs.List()),
-		OriginalTitle:   customFieldString(customFields, customFieldOriginalTitle),
-		OriginalDetails: customFieldString(customFields, customFieldOriginalDetails),
+		OriginalTitle:   customFieldString(customFields, models.CustomFieldOriginalTitle),
+		OriginalDetails: customFieldString(customFields, models.CustomFieldOriginalDetails),
 		Details:         scene.Details,
 		Rating:          scene.Rating,
 		OCounter:        oCount,
@@ -203,7 +202,7 @@ func toTombstoneStashIDs(ids []models.StashID) []models.TombstoneStashID {
 }
 
 func toTombstoneFile(f *models.VideoFile) *models.TombstoneFile {
-	fps := f.Fingerprints
+	fingerprints := f.Fingerprints
 	ret := &models.TombstoneFile{
 		Basename:   f.Basename,
 		Path:       f.Path,
@@ -213,17 +212,35 @@ func toTombstoneFile(f *models.VideoFile) *models.TombstoneFile {
 		Height:     f.Height,
 		VideoCodec: f.VideoCodec,
 		BitRate:    f.BitRate,
-		Oshash:     fps.GetString(models.FingerprintTypeOshash),
-		MD5:        fps.GetString(models.FingerprintTypeMD5),
+		Oshash:     fingerprints.GetString(models.FingerprintTypeOshash),
+		MD5:        fingerprints.GetString(models.FingerprintTypeMD5),
 	}
 
 	// Fingerprints.GetInt64 is inverted upstream, so read the phash directly.
-	if fp := fps.For(models.FingerprintTypePhash); fp != nil {
+	if fp := fingerprints.For(models.FingerprintTypePhash); fp != nil {
 		if v, ok := fp.Fingerprint.(int64); ok {
 			ret.Phash = &v
 		}
 	}
 
+	return ret
+}
+
+// removedTombstoneFiles converts the removed files that are not still among
+// the scene's current files.
+func removedTombstoneFiles(removed []*models.VideoFile, scene *models.Scene) []*models.TombstoneFile {
+	current := make(map[models.FileID]bool)
+	for _, f := range scene.Files.List() {
+		current[f.ID] = true
+	}
+
+	var ret []*models.TombstoneFile
+	for _, f := range removed {
+		if !current[f.ID] {
+			current[f.ID] = true
+			ret = append(ret, toTombstoneFile(f))
+		}
+	}
 	return ret
 }
 

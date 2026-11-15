@@ -77,7 +77,7 @@ type Tombstone {
 input TombstonePhashFilterInput {
   "Perceptual hash as a hex string"
   value: String!
-  "Maximum hamming distance, inclusive"
+  "Hamming distance, exclusive like the scene phash_distance filter: matches phashes less than distance apart. 0 or null matches the exact phash"
   distance: Int
 }
 

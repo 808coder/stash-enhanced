@@ -10,7 +10,7 @@ type ConfigTombstonesResult {
 
 input ConfigTombstonesInput {
   record: Boolean
-  "Empty string or null clears the setting"
+  "Null leaves the setting unchanged; an empty string clears it"
   previouslyDeletedTagId: ID
 }
 

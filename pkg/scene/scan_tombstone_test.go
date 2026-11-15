@@ -23,12 +23,18 @@ func tombstoneTestFile() *models.VideoFile {
 	}
 }
 
-func newTombstoneHandler(db *mocks.Database, record bool, tagID string) *ScanHandler {
+// newTombstoneHandler returns a handler with tombstone handling on, unless
+// record is false. tagID 0 means no tag is configured.
+func newTombstoneHandler(db *mocks.Database, record bool, tagID int) *ScanHandler {
+	if !record {
+		return &ScanHandler{}
+	}
 	return &ScanHandler{
-		TombstoneStore:         db.Tombstone,
-		TombstoneTags:          db.Tag,
-		RecordTombstones:       record,
-		PreviouslyDeletedTagID: tagID,
+		Tombstones: &ScanTombstoneOptions{
+			Store:                  db.Tombstone,
+			Tags:                   db.Tag,
+			PreviouslyDeletedTagID: tagID,
+		},
 	}
 }
 
@@ -38,7 +44,7 @@ func TestApplyTombstones(t *testing.T) {
 
 	t.Run("manual tombstone adds configured tag and keeps tombstone", func(t *testing.T) {
 		db := mocks.NewDatabase()
-		h := newTombstoneHandler(db, true, "5")
+		h := newTombstoneHandler(db, true, 5)
 		db.Tombstone.On("FindByFileFingerprints", mock.Anything, "abc", "def").Return([]*models.Tombstone{manual}, nil)
 		db.Tag.On("Find", mock.Anything, 5).Return(&models.Tag{ID: 5}, nil)
 
@@ -52,7 +58,7 @@ func TestApplyTombstones(t *testing.T) {
 
 	t.Run("manual tombstone without configured tag finds Previously deleted", func(t *testing.T) {
 		db := mocks.NewDatabase()
-		h := newTombstoneHandler(db, true, "")
+		h := newTombstoneHandler(db, true, 0)
 		db.Tombstone.On("FindByFileFingerprints", mock.Anything, "abc", "def").Return([]*models.Tombstone{manual}, nil)
 		db.Tag.On("FindByName", mock.Anything, "Previously deleted", true).Return(&models.Tag{ID: 7}, nil)
 
@@ -64,9 +70,23 @@ func TestApplyTombstones(t *testing.T) {
 		db.Tag.AssertNotCalled(t, "Create", mock.Anything, mock.Anything)
 	})
 
+	t.Run("manual tombstone with deleted configured tag falls back to Previously deleted", func(t *testing.T) {
+		db := mocks.NewDatabase()
+		h := newTombstoneHandler(db, true, 5)
+		db.Tombstone.On("FindByFileFingerprints", mock.Anything, "abc", "def").Return([]*models.Tombstone{manual}, nil)
+		db.Tag.On("Find", mock.Anything, 5).Return(nil, nil)
+		db.Tag.On("FindByName", mock.Anything, "Previously deleted", true).Return(&models.Tag{ID: 7}, nil)
+
+		s := models.NewScene()
+		db.WithTxnCtx(func(ctx context.Context) {
+			assert.NoError(t, h.applyTombstones(ctx, &s, tombstoneTestFile()))
+		})
+		assert.Equal(t, []int{7}, s.TagIDs.List())
+	})
+
 	t.Run("manual tombstone creates missing fallback tag", func(t *testing.T) {
 		db := mocks.NewDatabase()
-		h := newTombstoneHandler(db, true, "")
+		h := newTombstoneHandler(db, true, 0)
 		db.Tombstone.On("FindByFileFingerprints", mock.Anything, "abc", "def").Return([]*models.Tombstone{manual}, nil)
 		db.Tag.On("FindByName", mock.Anything, "Previously deleted", true).Return(nil, nil)
 		db.Tag.On("Create", mock.Anything, mock.AnythingOfType("*models.CreateTagInput")).
@@ -83,7 +103,7 @@ func TestApplyTombstones(t *testing.T) {
 
 	t.Run("clean tombstone is removed without tag", func(t *testing.T) {
 		db := mocks.NewDatabase()
-		h := newTombstoneHandler(db, true, "5")
+		h := newTombstoneHandler(db, true, 5)
 		db.Tombstone.On("FindByFileFingerprints", mock.Anything, "abc", "def").Return([]*models.Tombstone{clean}, nil)
 		db.Tombstone.On("Destroy", mock.Anything, 11).Return(nil)
 
@@ -97,7 +117,7 @@ func TestApplyTombstones(t *testing.T) {
 
 	t.Run("manual and clean: tag added, only clean removed", func(t *testing.T) {
 		db := mocks.NewDatabase()
-		h := newTombstoneHandler(db, true, "5")
+		h := newTombstoneHandler(db, true, 5)
 		db.Tombstone.On("FindByFileFingerprints", mock.Anything, "abc", "def").Return([]*models.Tombstone{manual, clean}, nil)
 		db.Tombstone.On("Destroy", mock.Anything, 11).Return(nil)
 		db.Tag.On("Find", mock.Anything, 5).Return(&models.Tag{ID: 5}, nil)
@@ -112,7 +132,7 @@ func TestApplyTombstones(t *testing.T) {
 
 	t.Run("no tombstone does nothing", func(t *testing.T) {
 		db := mocks.NewDatabase()
-		h := newTombstoneHandler(db, true, "5")
+		h := newTombstoneHandler(db, true, 5)
 		db.Tombstone.On("FindByFileFingerprints", mock.Anything, "abc", "def").Return(nil, nil)
 
 		s := models.NewScene()
@@ -124,7 +144,7 @@ func TestApplyTombstones(t *testing.T) {
 
 	t.Run("setting off performs no lookup", func(t *testing.T) {
 		db := mocks.NewDatabase()
-		h := newTombstoneHandler(db, false, "5")
+		h := newTombstoneHandler(db, false, 5)
 
 		s := models.NewScene()
 		db.WithTxnCtx(func(ctx context.Context) {

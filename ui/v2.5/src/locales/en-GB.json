@@ -644,7 +644,7 @@
       "previously_deleted_tag": "Previously deleted tag",
       "previously_deleted_tag_default": "Previously deleted (default)",
       "previously_deleted_tag_description": "Tag added to rescanned scenes that match a manually deleted scene. If unset, a tag named \"Previously deleted\" is used.",
-      "record": "Record deleted scenes",
+      "record": "Record tombstones",
       "record_description": "Keep a tombstone of a scene when it is deleted together with its files, so it can be recognised if it shows up again.",
       "title": "Tombstones"
     },

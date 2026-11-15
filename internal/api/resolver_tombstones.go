@@ -24,12 +24,10 @@ func (r *mutationResolver) ConfigureTombstones(ctx context.Context, input Config
 
 	r.setConfigBool(config.TombstonesRecord, input.Record)
 
-	// nil clears the setting, like an empty string
-	tagID := ""
+	// nil leaves the setting unchanged; an empty string clears it
 	if input.PreviouslyDeletedTagID != nil {
-		tagID = strings.TrimSpace(*input.PreviouslyDeletedTagID)
+		c.SetString(config.TombstonesPreviouslyDeletedTagID, strings.TrimSpace(*input.PreviouslyDeletedTagID))
 	}
-	c.SetString(config.TombstonesPreviouslyDeletedTagID, tagID)
 
 	if err := c.Write(); err != nil {
 		return makeConfigTombstonesResult(), err

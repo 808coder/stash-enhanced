@@ -320,11 +320,13 @@ type CleanMetadataInput struct {
 }
 
 func (s *Manager) Clean(ctx context.Context, input CleanMetadataInput) int {
+	fs := &file.OsFS{}
 	cleaner := &file.Cleaner{
-		FS:         &file.OsFS{},
+		FS:         fs,
 		Repository: file.NewRepository(s.Repository),
 		Handlers: []file.CleanHandler{
-			&cleanHandler{},
+			// one handler per run: it remembers files across the run
+			&cleanHandler{fs: fs},
 		},
 		TrashPath: s.Config.GetDeleteTrashPath(),
 	}

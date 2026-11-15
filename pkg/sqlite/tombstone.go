@@ -405,9 +405,12 @@ func tombstoneConditions(f *models.TombstoneFilter) []tombstoneCondition {
 		add(models.TombstoneMatchKeyMD5, tombstoneFileCondition("f.md5 = ?"), f.MD5)
 	}
 	if f.Phash != nil {
+		// like findScenes' phash_distance criterion: a distance d > 0 matches
+		// phashes less than d apart, distance 0 only the exact phash
+		limit := max(f.Phash.Distance, 1)
 		add(models.TombstoneMatchKeyPhash,
-			tombstoneFileCondition("typeof(f.phash) = 'integer' AND phash_distance(f.phash, ?) <= ?"),
-			f.Phash.Value, f.Phash.Distance)
+			tombstoneFileCondition("typeof(f.phash) = 'integer' AND phash_distance(f.phash, ?) < ?"),
+			f.Phash.Value, limit)
 	}
 	if f.Code != "" {
 		add(models.TombstoneMatchKeyCode, "t.code = ?", f.Code)

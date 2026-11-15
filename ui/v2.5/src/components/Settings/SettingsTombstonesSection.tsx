@@ -24,19 +24,11 @@ export const SettingsTombstonesSection: React.FC = () => {
 
   const config = data.configuration.tombstones;
 
-  // the server clears the tag when previouslyDeletedTagId is empty, so the
-  // current value is always sent along
-  async function save(input: Partial<GQL.ConfigTombstonesInput>) {
+  // unset fields are left unchanged by the server; an empty
+  // previouslyDeletedTagId clears the tag
+  async function save(input: GQL.ConfigTombstonesInput) {
     try {
-      await configure({
-        variables: {
-          input: {
-            record: config.record,
-            previouslyDeletedTagId: config.previouslyDeletedTagId ?? "",
-            ...input,
-          },
-        },
-      });
+      await configure({ variables: { input } });
     } catch (e) {
       Toast.error(e);
     }
