@@ -52,6 +52,7 @@ Optional. Only these are allowed; the PR title check rejects any other:
 | `scraper` | scrapers and stash-box |
 | `plugin` | plugin system |
 | `config` | settings and configuration (backend and settings UI) |
+| `translate` | machine translation of metadata |
 | `agent` | stash-agent (#9) |
 | `ci` | workflows |
 | `docker` | Docker images |

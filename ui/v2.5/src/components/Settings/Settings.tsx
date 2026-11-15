@@ -14,6 +14,7 @@ import { SettingsPluginsPanel } from "./SettingsPluginsPanel";
 import { SettingsScrapingPanel } from "./SettingsScrapingPanel";
 import { SettingsToolsPanel } from "./SettingsToolsPanel";
 import { SettingsServicesPanel } from "./SettingsServicesPanel";
+import { SettingsTranslationPanel } from "./SettingsTranslationPanel";
 import { SettingsContext, useSettings } from "./context";
 import { SettingsLibraryPanel } from "./SettingsLibraryPanel";
 import { SettingsSecurityPanel } from "./SettingsSecurityPanel";
@@ -27,6 +28,7 @@ const validTabs = [
   "interface",
   "security",
   "metadata-providers",
+  "translation",
   "services",
   "system",
   "plugins",
@@ -87,6 +89,13 @@ const SettingTabs: React.FC<{ tab: TabKey }> = ({ tab }) => {
               <LinkContainer to="/settings?tab=metadata-providers">
                 <Nav.Link eventKey="metadata-providers">
                   <FormattedMessage id="config.categories.metadata_providers" />
+                </Nav.Link>
+              </LinkContainer>
+            </Nav.Item>
+            <Nav.Item>
+              <LinkContainer to="/settings?tab=translation">
+                <Nav.Link eventKey="translation">
+                  <FormattedMessage id="config.categories.translation" />
                 </Nav.Link>
               </LinkContainer>
             </Nav.Item>
@@ -182,6 +191,9 @@ const SettingTabs: React.FC<{ tab: TabKey }> = ({ tab }) => {
             </Tab.Pane>
             <Tab.Pane eventKey="metadata-providers" unmountOnExit>
               <SettingsScrapingPanel />
+            </Tab.Pane>
+            <Tab.Pane eventKey="translation" unmountOnExit>
+              <SettingsTranslationPanel />
             </Tab.Pane>
             <Tab.Pane eventKey="system">
               <SettingsConfigurationPanel />

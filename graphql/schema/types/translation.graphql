@@ -1,0 +1,88 @@
+# Machine translation of metadata through interchangeable translation providers.
+# Kept in its own file (using extend) to limit merge conflicts with upstream.
+
+enum TranslationProvider {
+  "Translation is disabled"
+  NONE
+  "OpenAI-compatible chat completions API: Ollama, LM Studio, vLLM or a cloud service"
+  OPENAI_COMPATIBLE
+}
+
+"Maps a language tag to the language code of the scenes carrying it"
+type TranslationLanguageMapping {
+  tagId: ID!
+  "Language code, e.g. ja"
+  languageCode: String!
+}
+
+input TranslationLanguageMappingInput {
+  tagId: ID!
+  "Language code, e.g. ja"
+  languageCode: String!
+}
+
+type ConfigTranslationOpenAIResult {
+  "API root including the version, e.g. http://192.168.1.50:11434/v1"
+  baseURL: String!
+  model: String!
+  "Optional; local servers usually need none"
+  apiKey: String!
+  "Empty means the default system prompt is used"
+  systemPrompt: String!
+}
+
+input ConfigTranslationOpenAIInput {
+  "API root including the version, e.g. http://192.168.1.50:11434/v1"
+  baseURL: String
+  model: String
+  "Optional; local servers usually need none"
+  apiKey: String
+  "Empty means the default system prompt is used"
+  systemPrompt: String
+}
+
+type ConfigTranslationResult {
+  "Active translation provider"
+  provider: TranslationProvider!
+  "Language code metadata is translated into. Defaults to en"
+  targetLanguage: String!
+  "If true, translating a single scene saves directly instead of opening the review dialog"
+  applyWithoutReview: Boolean!
+  languageMappings: [TranslationLanguageMapping!]!
+  openai: ConfigTranslationOpenAIResult!
+  "System prompt used when openai.systemPrompt is empty"
+  defaultSystemPrompt: String!
+}
+
+input ConfigTranslationInput {
+  provider: TranslationProvider
+  targetLanguage: String
+  applyWithoutReview: Boolean
+  "Replaces all language mappings"
+  languageMappings: [TranslationLanguageMappingInput!]
+  openai: ConfigTranslationOpenAIInput
+}
+
+type TranslationTestResult {
+  success: Boolean!
+  "Sample text that was translated"
+  source: String!
+  translation: String
+  error: String
+}
+
+extend type ConfigResult {
+  translation: ConfigTranslationResult!
+}
+
+extend type Query {
+  """
+  Translates a sample text with the active provider.
+  Fields set in input override the saved configuration; nothing is saved.
+  """
+  testTranslation(input: ConfigTranslationInput!): TranslationTestResult!
+}
+
+extend type Mutation {
+  configureTranslation(input: ConfigTranslationInput!): ConfigTranslationResult!
+}

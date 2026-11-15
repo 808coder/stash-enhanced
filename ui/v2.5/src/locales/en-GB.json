@@ -283,7 +283,8 @@
       "services": "Services",
       "system": "System",
       "tasks": "Tasks",
-      "tools": "Tools"
+      "tools": "Tools",
+      "translation": "Translation"
     },
     "changelog": {
       "header": "Changelog"
@@ -659,6 +660,45 @@
         "whitespace_chars_desc": "These characters will be replaced with whitespace in the title"
       },
       "scene_tools": "Scene Tools"
+    },
+    "translation": {
+      "apply_without_review": "Apply translations without review",
+      "apply_without_review_description": "Translating a single scene saves directly instead of opening the review dialog.",
+      "invalid_language_code": "Invalid language code, e.g. ja",
+      "language_mappings": {
+        "add": "Add mapping",
+        "description": "Maps language tags to the language code of the scenes carrying them. Scenes without a mapped tag are not translated.",
+        "incomplete": "Every mapping needs a tag and a valid language code, e.g. ja. Incomplete mappings are not saved.",
+        "language_code": "Language code",
+        "tag": "Tag",
+        "title": "Language mapping"
+      },
+      "not_set": "Not set",
+      "openai": {
+        "api_key": "API key",
+        "api_key_description": "Optional; local servers usually need none.",
+        "base_url": "Base URL",
+        "base_url_description": "API root including the version, e.g. http://192.168.1.50:11434/v1. When Stash runs in Docker, use the server's LAN address, not localhost.",
+        "description": "Chat completions API of Ollama, LM Studio, vLLM or a cloud service.",
+        "model": "Model",
+        "model_description": "Model name as the server knows it, e.g. qwen3:14b",
+        "prompt_custom": "Custom",
+        "prompt_default": "Default",
+        "reset_to_default": "Reset to default",
+        "system_prompt": "System prompt",
+        "system_prompt_description": "Instructions for the model. Leave empty to use the default prompt.",
+        "title": "OpenAI-compatible"
+      },
+      "provider": "Translation provider",
+      "provider_description": "Provider used to translate scene titles, details and tags.",
+      "provider_none": "None (disabled)",
+      "provider_openai_compatible": "OpenAI-compatible",
+      "target_language": "Target language",
+      "target_language_description": "Language code metadata is translated into, e.g. en.",
+      "test_connection": "Test connection",
+      "test_connection_description": "Translates a sample text with the saved settings of the active provider.",
+      "test_failed": "Test failed: {error}",
+      "title": "Translation"
     },
     "ui": {
       "abbreviate_counters": {

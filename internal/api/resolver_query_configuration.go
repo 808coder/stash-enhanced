@@ -60,12 +60,13 @@ func getParent(path string) *string {
 
 func makeConfigResult() *ConfigResult {
 	return &ConfigResult{
-		General:   makeConfigGeneralResult(),
-		Interface: makeConfigInterfaceResult(),
-		Dlna:      makeConfigDLNAResult(),
-		Scraping:  makeConfigScrapingResult(),
-		Defaults:  makeConfigDefaultsResult(),
-		UI:        makeConfigUIResult(),
+		General:     makeConfigGeneralResult(),
+		Interface:   makeConfigInterfaceResult(),
+		Dlna:        makeConfigDLNAResult(),
+		Scraping:    makeConfigScrapingResult(),
+		Defaults:    makeConfigDefaultsResult(),
+		UI:          makeConfigUIResult(),
+		Translation: makeConfigTranslationResult(),
 	}
 }
 

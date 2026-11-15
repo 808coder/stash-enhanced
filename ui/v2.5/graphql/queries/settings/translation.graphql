@@ -1,0 +1,8 @@
+query TestTranslation($input: ConfigTranslationInput!) {
+  testTranslation(input: $input) {
+    success
+    source
+    translation
+    error
+  }
+}
