@@ -1,0 +1,23 @@
+# Scene tombstone settings. Kept in its own file (using extend) to limit merge
+# conflicts with upstream.
+
+type ConfigTombstonesResult {
+  "If true, a tombstone is recorded when a scene is deleted. Defaults to true"
+  record: Boolean!
+  "Tag added to rescanned scenes that were deleted manually. Null means a tag named 'Previously deleted' is used"
+  previouslyDeletedTagId: ID
+}
+
+input ConfigTombstonesInput {
+  record: Boolean
+  "Empty string or null clears the setting"
+  previouslyDeletedTagId: ID
+}
+
+extend type ConfigResult {
+  tombstones: ConfigTombstonesResult!
+}
+
+extend type Mutation {
+  configureTombstones(input: ConfigTombstonesInput!): ConfigTombstonesResult!
+}
