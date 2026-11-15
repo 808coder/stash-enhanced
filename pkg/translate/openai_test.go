@@ -204,3 +204,9 @@ func TestNew(t *testing.T) {
 	require.NoError(t, err)
 	assert.IsType(t, &OpenAI{}, tr)
 }
+
+func TestMaskAPIKey(t *testing.T) {
+	assert.Equal(t, "no API key", maskAPIKey(""))
+	assert.Equal(t, "API key ********", maskAPIKey("sk-secret-123"))
+	assert.NotContains(t, maskAPIKey("sk-secret-123"), "secret")
+}

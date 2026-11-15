@@ -1788,6 +1788,29 @@
     "updated_entity": "Updated {entity}"
   },
   "total": "Total",
+  "translation": {
+    "actions": {
+      "restore_original": "Restore original",
+      "translate": "Translate",
+      "translate_again": "Translate again"
+    },
+    "current": "Current",
+    "dialog_title": "Translate scene",
+    "original": "Original",
+    "task": {
+      "description": "Translates title and details of all scenes with a mapped language tag that are still in the source language.",
+      "force": "Re-translate",
+      "force_description": "Also translate scenes again from their original metadata",
+      "heading": "Translate metadata"
+    },
+    "toast": {
+      "nothing_to_translate": "Nothing to translate",
+      "restored": "Original metadata restored",
+      "saved": "Translation saved",
+      "translating": "Translating…"
+    },
+    "translated": "Translated"
+  },
   "true": "True",
   "twitter": "Twitter",
   "type": "Type",

@@ -56,6 +56,7 @@ import cx from "classnames";
 import { TruncatedText } from "src/components/Shared/TruncatedText";
 import { PatchComponent, PatchContainerComponent } from "src/patch";
 import { SceneMergeModal } from "../SceneMergeDialog";
+import { useSceneTranslation } from "../SceneTranslation";
 import { goBackOrReplace } from "src/utils/history";
 import { FormattedDate } from "src/components/Shared/Date";
 import { StudioLogo } from "src/components/Shared/StudioLogo";
@@ -221,6 +222,7 @@ const ScenePage: React.FC<IProps> = PatchComponent("ScenePage", (props) => {
   const [isMerging, setIsMerging] = useState(false);
   const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState<boolean>(false);
   const [isGenerateDialogOpen, setIsGenerateDialogOpen] = useState(false);
+  const translation = useSceneTranslation(scene);
 
   const onScreenshotJobComplete = useCallback(
     async (job?: JobFragment) => {
@@ -520,6 +522,7 @@ const ScenePage: React.FC<IProps> = PatchComponent("ScenePage", (props) => {
           <FormattedMessage id="actions.merge" />
           ...
         </Dropdown.Item>
+        {translation.menuItems}
         <Dropdown.Item
           key="delete-scene"
           className="bg-secondary text-white"
@@ -714,6 +717,7 @@ const ScenePage: React.FC<IProps> = PatchComponent("ScenePage", (props) => {
       {maybeRenderSceneGenerateDialog()}
       {maybeRenderMergeDialog()}
       {maybeRenderDeleteDialog()}
+      {translation.dialog}
       <div
         className={`scene-tabs order-xl-first order-last ${
           collapsed ? "collapsed" : ""

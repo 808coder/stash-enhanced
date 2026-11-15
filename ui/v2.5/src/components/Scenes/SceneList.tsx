@@ -60,6 +60,7 @@ import { useZoomKeybinds } from "../List/ZoomSlider";
 import { FilteredListToolbar } from "../List/FilteredListToolbar";
 import { FilterTags } from "../List/FilterTags";
 import { SidebarFolderFilter } from "../List/Filters/FolderFilter";
+import { useSceneTranslationOperations } from "./SceneTranslation";
 
 function renderMetadataByline(result: GQL.FindScenesQueryResult) {
   const duration = result?.data?.findScenes?.duration;
@@ -498,6 +499,10 @@ export const FilteredSceneList = PatchComponent(
     const playRandom = usePlayRandom(effectiveFilter, totalCount);
     const playSelected = usePlaySelected(selectedIds);
     const playFirst = usePlayFirst();
+    const translationOperations = useSceneTranslationOperations(
+      () => Array.from(selectedIds.values()),
+      hasSelection
+    );
 
     function onCreateNew() {
       const queryParam = new URLSearchParams(location.search).get("q");
@@ -619,6 +624,7 @@ export const FilteredSceneList = PatchComponent(
           ),
         isDisplayed: () => hasSelection,
       },
+      ...translationOperations,
       {
         text: `${intl.formatMessage({ id: "actions.merge" })}…`,
         onClick: () => onMerge(),

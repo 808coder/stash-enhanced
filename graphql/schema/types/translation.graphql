@@ -86,3 +86,62 @@ extend type Query {
 extend type Mutation {
   configureTranslation(input: ConfigTranslationInput!): ConfigTranslationResult!
 }
+
+"Translation of one scene field"
+type SceneFieldTranslation {
+  "Text that was translated; becomes the original metadata when applied"
+  source: String!
+  "Value of the field before the translation"
+  current: String!
+  translation: String!
+  "Language code of the source text"
+  language: String!
+}
+
+type SceneTranslation {
+  scene: Scene!
+  "Translation provider and model, e.g. openai_compatible:qwen3:14b"
+  provider: String!
+  "Null if the title was not translated"
+  title: SceneFieldTranslation
+  "Null if the details were not translated"
+  details: SceneFieldTranslation
+  warnings: [String!]!
+  "True if the translation was saved"
+  saved: Boolean!
+}
+
+input SceneFieldTranslationInput {
+  source: String!
+  translation: String!
+  language: String!
+}
+
+input SceneTranslationApplyInput {
+  id: ID!
+  provider: String!
+  "Omit to leave the title unchanged"
+  title: SceneFieldTranslationInput
+  "Omit to leave the details unchanged"
+  details: SceneFieldTranslationInput
+}
+
+input TranslateMetadataInput {
+  "Scenes to translate. If empty, all scenes with a mapped language tag are translated"
+  sceneIds: [ID!]
+  "Re-translate fields from their original metadata, even if they are no longer in the source language"
+  force: Boolean
+}
+
+extend type Mutation {
+  "Translates title and details of a scene without saving, for review"
+  sceneTranslatePreview(id: ID!, force: Boolean): SceneTranslation!
+  "Translates title and details of a scene and saves the result"
+  sceneTranslate(id: ID!, force: Boolean): SceneTranslation!
+  "Saves a reviewed translation"
+  sceneTranslateApply(input: SceneTranslationApplyInput!): Scene!
+  "Writes the original metadata back and removes the translation custom fields"
+  scenesRestoreOriginal(ids: [ID!]!): [Scene!]!
+  "Translates and saves scenes in a job. Returns the job ID"
+  metadataTranslate(input: TranslateMetadataInput!): ID!
+}

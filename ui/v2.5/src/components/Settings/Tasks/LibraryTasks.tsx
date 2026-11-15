@@ -10,6 +10,7 @@ import { withoutTypename } from "src/utils/data";
 import { useConfigurationContext } from "src/hooks/Config";
 import { useAutoTagTrigger } from "src/hooks/useAutoTagTrigger";
 import { IdentifyDialog } from "../../Dialogs/IdentifyDialog/IdentifyDialog";
+import { TranslateMetadataTask } from "./TranslateMetadataTask";
 import * as GQL from "src/core/generated-graphql";
 import { DirectorySelectionDialog } from "./DirectorySelectionDialog";
 import { ScanOptions } from "./ScanOptions";
@@ -418,6 +419,8 @@ export const LibraryTasks: React.FC = () => {
           </Button>
         </Setting>
       </SettingSection>
+
+      <TranslateMetadataTask />
 
       <SettingSection advanced>
         <SettingGroup
