@@ -640,6 +640,14 @@
       "scan_for_content_desc": "Scan for new content and add it to the database.",
       "set_name_date_details_from_metadata_if_present": "Set name, date, details from embedded file metadata"
     },
+    "tombstones": {
+      "previously_deleted_tag": "Previously deleted tag",
+      "previously_deleted_tag_default": "Previously deleted (default)",
+      "previously_deleted_tag_description": "Tag added to rescanned scenes that match a manually deleted scene. If unset, a tag named \"Previously deleted\" is used.",
+      "record": "Record deleted scenes",
+      "record_description": "Keep a tombstone of a scene when it is deleted together with its files, so it can be recognised if it shows up again.",
+      "title": "Tombstones"
+    },
     "tools": {
       "graphql_playground": "GraphQL playground",
       "heading": "Tools",
@@ -659,7 +667,8 @@
         "whitespace_chars": "Whitespace characters",
         "whitespace_chars_desc": "These characters will be replaced with whitespace in the title"
       },
-      "scene_tools": "Scene Tools"
+      "scene_tools": "Scene Tools",
+      "tombstones": "Tombstones"
     },
     "translation": {
       "apply_without_review": "Apply translations without review",
@@ -1786,6 +1795,38 @@
     "started_generating": "Started generating",
     "started_importing": "Started importing",
     "updated_entity": "Updated {entity}"
+  },
+  "tombstones": {
+    "deleted_at": "Deleted {date}",
+    "delete_desc": "Delete the tombstone of \"{title}\"? Rescanned copies of this scene will no longer be recognised.",
+    "delete_title": "Delete tombstone",
+    "description": "Records of scenes that were deleted together with their files. Search by title, Filename, URL, studio code, Stash ID, oshash, md5 or phash.",
+    "edit_reason": "Edit reason",
+    "empty": "No tombstones found.",
+    "found": "{count, plural, one {# tombstone} other {# tombstones}} found",
+    "match_keys": {
+      "basename": "Filename",
+      "code": "Code",
+      "md5": "MD5",
+      "oshash": "Oshash",
+      "phash": "Phash",
+      "stash_id": "Stash ID",
+      "title": "Title",
+      "url": "URL"
+    },
+    "matched_on": "Matched on",
+    "no_reason": "No reason given",
+    "origin_clean": "Removed by clean",
+    "origin_manual": "Deleted manually",
+    "reason": "Reason",
+    "reason_placeholder": "Why is this scene being deleted? (optional)",
+    "search": "Search tombstones",
+    "title": "Tombstones",
+    "toast": {
+      "deleted": "Deleted tombstone",
+      "updated": "Updated reason"
+    },
+    "untitled": "Untitled scene"
   },
   "total": "Total",
   "translation": {

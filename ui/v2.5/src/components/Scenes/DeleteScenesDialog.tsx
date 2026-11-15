@@ -43,6 +43,8 @@ export const DeleteScenesDialog: React.FC<IDeleteSceneDialogProps> = (
     config?.defaults.deleteGenerated ?? true
   );
 
+  const [reason, setReason] = useState("");
+
   const Toast = useToast();
   const [deleteScene] = useScenesDestroy(getScenesDeleteInput());
 
@@ -54,6 +56,7 @@ export const DeleteScenesDialog: React.FC<IDeleteSceneDialogProps> = (
       ids: props.selected.map((scene) => scene.id),
       delete_file: deleteFile,
       delete_generated: deleteGenerated,
+      reason: deleteFile && config?.tombstones.record ? reason : undefined,
     };
   }
 
@@ -166,6 +169,23 @@ export const DeleteScenesDialog: React.FC<IDeleteSceneDialogProps> = (
           })}
           onChange={() => setDeleteGenerated(!deleteGenerated)}
         />
+        {deleteFile && config?.tombstones.record && (
+          <Form.Group controlId="delete-reason" className="mt-3">
+            <Form.Label>
+              <FormattedMessage id="tombstones.reason" />
+            </Form.Label>
+            <Form.Control
+              as="textarea"
+              rows={2}
+              className="text-input"
+              value={reason}
+              placeholder={intl.formatMessage({
+                id: "tombstones.reason_placeholder",
+              })}
+              onChange={(e) => setReason(e.currentTarget.value)}
+            />
+          </Form.Group>
+        )}
       </Form>
     </ModalComponent>
   );

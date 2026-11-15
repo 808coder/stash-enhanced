@@ -1,0 +1,38 @@
+fragment ConfigTombstonesData on ConfigTombstonesResult {
+  record
+  previouslyDeletedTagId
+}
+
+fragment TombstoneData on Tombstone {
+  id
+  deleted_at
+  origin
+  reason
+  scene_id
+  title
+  code
+  date
+  urls
+  original_title
+  details
+  studio {
+    name
+  }
+  performers {
+    name
+  }
+  tags
+  files {
+    id
+    basename
+    path
+    size
+    duration
+    width
+    height
+    video_codec
+    oshash
+    md5
+    phash
+  }
+}

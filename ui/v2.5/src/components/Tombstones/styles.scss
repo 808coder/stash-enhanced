@@ -1,0 +1,14 @@
+#tombstones {
+  .tombstone-file-path {
+    font-size: 0.88em;
+    overflow-wrap: anywhere;
+  }
+
+  .tombstone-reason {
+    white-space: pre-wrap;
+  }
+
+  .matched-key {
+    margin-right: 0.25rem;
+  }
+}

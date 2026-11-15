@@ -1,0 +1,14 @@
+query FindTombstones(
+  $tombstone_filter: TombstoneFilterInput
+  $filter: FindFilterType
+) {
+  findTombstones(tombstone_filter: $tombstone_filter, filter: $filter) {
+    count
+    matches {
+      matched_keys
+      tombstone {
+        ...TombstoneData
+      }
+    }
+  }
+}
