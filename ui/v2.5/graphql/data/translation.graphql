@@ -14,3 +14,22 @@ fragment ConfigTranslationData on ConfigTranslationResult {
   }
   defaultSystemPrompt
 }
+
+fragment SceneFieldTranslationData on SceneFieldTranslation {
+  source
+  current
+  translation
+  language
+}
+
+fragment SceneTranslationData on SceneTranslation {
+  provider
+  saved
+  warnings
+  title {
+    ...SceneFieldTranslationData
+  }
+  details {
+    ...SceneFieldTranslationData
+  }
+}

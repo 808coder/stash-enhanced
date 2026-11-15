@@ -3,3 +3,34 @@ mutation ConfigureTranslation($input: ConfigTranslationInput!) {
     ...ConfigTranslationData
   }
 }
+
+mutation SceneTranslatePreview($id: ID!, $force: Boolean) {
+  sceneTranslatePreview(id: $id, force: $force) {
+    ...SceneTranslationData
+  }
+}
+
+mutation SceneTranslate($id: ID!, $force: Boolean) {
+  sceneTranslate(id: $id, force: $force) {
+    ...SceneTranslationData
+    scene {
+      ...SceneData
+    }
+  }
+}
+
+mutation SceneTranslateApply($input: SceneTranslationApplyInput!) {
+  sceneTranslateApply(input: $input) {
+    ...SceneData
+  }
+}
+
+mutation ScenesRestoreOriginal($ids: [ID!]!) {
+  scenesRestoreOriginal(ids: $ids) {
+    ...SceneData
+  }
+}
+
+mutation MetadataTranslate($input: TranslateMetadataInput!) {
+  metadataTranslate(input: $input)
+}
