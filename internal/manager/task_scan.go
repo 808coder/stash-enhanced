@@ -717,6 +717,11 @@ func getScanHandlers(options ScanMetadataInput, taskQueue *job.TaskQueue, progre
 				},
 				FileNamingAlgorithm: c.GetVideoFileNamingAlgorithm(),
 				Paths:               mgr.Paths,
+
+				TombstoneStore:         r.Tombstone,
+				TombstoneTags:          r.Tag,
+				RecordTombstones:       c.GetTombstonesRecord(),
+				PreviouslyDeletedTagID: c.GetTombstonesPreviouslyDeletedTagID(),
 			},
 		},
 	}
