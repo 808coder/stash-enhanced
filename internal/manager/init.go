@@ -51,6 +51,10 @@ func Initialize(cfg *config.Config, l *log.Logger) (*Manager, error) {
 		Repository:       db.Scene,
 		MarkerRepository: db.SceneMarker,
 		PluginCache:      pluginCache,
+		Tombstone:        db.Tombstone,
+		Performer:        db.Performer,
+		Studio:           db.Studio,
+		Tag:              db.Tag,
 		Paths:            mgrPaths,
 		Config:           cfg,
 	}

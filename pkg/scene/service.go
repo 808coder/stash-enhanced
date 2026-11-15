@@ -10,6 +10,9 @@ import (
 
 type Config interface {
 	GetVideoFileNamingAlgorithm() models.HashAlgorithm
+	// GetTombstonesRecord reports whether Tombstones are recorded when
+	// scenes are destroyed.
+	GetTombstonesRecord() bool
 }
 
 type Service struct {
@@ -17,6 +20,13 @@ type Service struct {
 	Repository       models.SceneReaderWriter
 	MarkerRepository models.SceneMarkerReaderWriter
 	PluginCache      *plugin.Cache
+
+	// Tombstone and the readers below are used to snapshot a scene into a
+	// Tombstone when it is destroyed.
+	Tombstone models.TombstoneWriter
+	Performer models.PerformerReader
+	Studio    models.StudioReader
+	Tag       models.TagReader
 
 	Paths  *paths.Paths
 	Config Config

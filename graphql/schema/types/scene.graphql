@@ -210,6 +210,8 @@ input SceneDestroyInput {
   delete_generated: Boolean
   "If true, delete the file entry from the database if the file is not assigned to any other objects"
   destroy_file_entry: Boolean
+  "Optional reason stored on the Tombstone written when delete_file is true and tombstones are recorded"
+  reason: String
 }
 
 input ScenesDestroyInput {
@@ -218,6 +220,8 @@ input ScenesDestroyInput {
   delete_generated: Boolean
   "If true, delete the file entry from the database if the file is not assigned to any other objects"
   destroy_file_entry: Boolean
+  "Optional reason stored on the Tombstone written when delete_file is true and tombstones are recorded"
+  reason: String
 }
 
 type FindScenesResultType {

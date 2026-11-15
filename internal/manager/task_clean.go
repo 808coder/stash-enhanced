@@ -300,6 +300,12 @@ func (h *cleanHandler) handleRelatedScenes(ctx context.Context, fileDeleter *fil
 		Paths:          mgr.Paths,
 	}
 
+	// the file is gone from disk: record a clean Tombstone
+	destroyOpts := scene.DestroyOptions{
+		DeleteGenerated: true,
+		Tombstone:       &scene.TombstoneOptions{Origin: models.TombstoneOriginClean},
+	}
+
 	for _, scene := range scenes {
 		if err := scene.LoadFiles(ctx, sceneQB); err != nil {
 			return err
@@ -308,10 +314,7 @@ func (h *cleanHandler) handleRelatedScenes(ctx context.Context, fileDeleter *fil
 		// only delete if the scene has no other files
 		if len(scene.Files.List()) <= 1 {
 			logger.Infof("Deleting scene %q since it has no other related files", scene.DisplayName())
-			const deleteGenerated = true
-			const deleteFile = false
-			const destroyFileEntry = false
-			if err := mgr.SceneService.Destroy(ctx, scene, sceneFileDeleter, deleteGenerated, deleteFile, destroyFileEntry); err != nil {
+			if err := mgr.SceneService.Destroy(ctx, scene, sceneFileDeleter, destroyOpts); err != nil {
 				return err
 			}
 

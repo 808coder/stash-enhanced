@@ -118,10 +118,9 @@ func (s *Service) Merge(ctx context.Context, sourceIDs []int, destinationID int,
 
 	// delete old scenes
 	for _, src := range sources {
-		const deleteGenerated = true
-		const deleteFile = false
-		const destroyFileEntry = false
-		if err := s.Destroy(ctx, src, fileDeleter, deleteGenerated, deleteFile, destroyFileEntry); err != nil {
+		// the merged content survives in the destination: no Tombstone
+		opts := DestroyOptions{DeleteGenerated: true, Tombstone: nil}
+		if err := s.Destroy(ctx, src, fileDeleter, opts); err != nil {
 			return fmt.Errorf("deleting scene %d: %w", src.ID, err)
 		}
 	}
