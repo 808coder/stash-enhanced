@@ -301,13 +301,15 @@ func TestJob_AbortsAfterConsecutiveFailures(t *testing.T) {
 		Repository: db.Repository(),
 		Translator: &fakeTranslator{err: &translate.Error{Kind: translate.ErrorKindConnection, Err: errors.New("down")}},
 		Options:    testOptions,
+		Scenes:     true,
 		SceneIDs:   []int{1, 2, 3, 4, 5},
 	}
 
 	summary, err := j.Execute(context.Background(), noopProgress{})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "3 consecutive failures")
-	assert.Equal(t, Summary{Failed: 3}, *summary)
+	assert.Equal(t, Summary{Failed: 3}, *summary.Scenes)
+	assert.Nil(t, summary.Tags)
 }
 
 func TestJob_TranslatesAndSkips(t *testing.T) {
@@ -324,12 +326,13 @@ func TestJob_TranslatesAndSkips(t *testing.T) {
 		Translator: &fakeTranslator{},
 		Hooks:      hooks,
 		Options:    testOptions,
+		Scenes:     true,
 		SceneIDs:   []int{1, 2},
 	}
 
 	summary, err := j.Execute(context.Background(), noopProgress{})
 	require.NoError(t, err)
-	assert.Equal(t, Summary{Translated: 1, Skipped: 1}, *summary)
+	assert.Equal(t, Summary{Translated: 1, Skipped: 1}, *summary.Scenes)
 	assert.Equal(t, 1, hooks.calls)
 	db.AssertExpectations(t)
 }

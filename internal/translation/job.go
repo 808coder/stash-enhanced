@@ -4,7 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/stashapp/stash/internal/manager/config"
@@ -26,11 +28,12 @@ type HookExecutor interface {
 
 // OptionsFromConfig reads the language mapping and target language from the
 // configuration. Mappings with an invalid tag ID are ignored.
-func OptionsFromConfig(c *config.Config, force bool) Options {
+func OptionsFromConfig(c *config.Config, force, mergeOnCollision bool) Options {
 	opts := Options{
 		LanguageMappings: make(map[int]string),
 		TargetLanguage:   c.GetTranslationTargetLanguage(),
 		Force:            force,
+		MergeOnCollision: mergeOnCollision,
 	}
 	for _, m := range c.GetTranslationLanguageMappings() {
 		id, err := strconv.Atoi(m.TagID)
@@ -77,20 +80,26 @@ func TranslateAndApply(ctx context.Context, r models.Repository, tr translate.Tr
 	return t, nil
 }
 
-// Job translates scenes in a batch and saves the results directly.
+// Job translates scenes and tags in a batch and saves the results directly.
 type Job struct {
 	Repository models.Repository
 	Translator translate.Translator
 	Hooks      HookExecutor
+	TagHooks   TagHookExecutor
 	Options    Options
+
+	// Scenes translates scene titles and details.
+	Scenes bool
 	// SceneIDs to translate. If empty, all scenes with a mapped language tag
 	// are translated.
 	SceneIDs []int
+	// Tags translates the names of all tags in a mapped source language.
+	Tags bool
 
 	now func() time.Time
 }
 
-// Summary counts the outcome of a batch.
+// Summary counts the outcome of the scenes in a batch.
 type Summary struct {
 	Translated int
 	Skipped    int
@@ -101,13 +110,39 @@ func (s Summary) String() string {
 	return fmt.Sprintf("%d translated, %d skipped, %d failed", s.Translated, s.Skipped, s.Failed)
 }
 
+// TagSummary counts the outcome of the tags in a batch.
+type TagSummary struct {
+	Renamed int
+	Merged  int
+	Skipped int
+	Failed  int
+}
+
+func (s TagSummary) String() string {
+	return fmt.Sprintf("%d renamed, %d merged, %d skipped, %d failed", s.Renamed, s.Merged, s.Skipped, s.Failed)
+}
+
+// Result is the outcome of a batch. A summary is nil if the batch did not
+// include scenes or tags.
+type Result struct {
+	Scenes *Summary
+	Tags   *TagSummary
+}
+
+func (r Result) String() string {
+	var parts []string
+	if r.Scenes != nil {
+		parts = append(parts, "scenes: "+r.Scenes.String())
+	}
+	if r.Tags != nil {
+		parts = append(parts, "tags: "+r.Tags.String())
+	}
+	return strings.Join(parts, "; ")
+}
+
 func (j *Job) sceneIDs(ctx context.Context) ([]int, error) {
 	if len(j.SceneIDs) > 0 {
 		return j.SceneIDs, nil
-	}
-
-	if len(j.Options.LanguageMappings) == 0 {
-		return nil, errors.New("no language mapping configured")
 	}
 
 	tagIDs := make([]string, 0, len(j.Options.LanguageMappings))
@@ -132,6 +167,29 @@ func (j *Job) sceneIDs(ctx context.Context) ([]int, error) {
 	return ret, err
 }
 
+// tagIDs returns the tags whose name is in a mapped source language, or
+// whose source language is ambiguous, sorted by ID.
+func (j *Job) tagIDs(ctx context.Context) ([]int, error) {
+	langs := j.Options.mappedLanguages()
+
+	var ret []int
+	err := j.Repository.WithReadTxn(ctx, func(ctx context.Context) error {
+		tags, err := j.Repository.Tag.All(ctx)
+		if err != nil {
+			return err
+		}
+		for _, t := range tags {
+			lang, err := TagSourceLanguage(t.Name, langs, j.Options.TargetLanguage)
+			if lang != "" || errors.Is(err, translate.ErrAmbiguousLanguage) {
+				ret = append(ret, t.ID)
+			}
+		}
+		return nil
+	})
+	sort.Ints(ret)
+	return ret, err
+}
+
 // Progress receives the progress of a batch. *job.Progress implements it.
 type Progress interface {
 	SetTotal(total int)
@@ -141,60 +199,112 @@ type Progress interface {
 
 // Execute runs the batch. It returns an error only if the batch could not
 // start or was aborted after MaxConsecutiveFailures.
-func (j *Job) Execute(ctx context.Context, progress Progress) (*Summary, error) {
+func (j *Job) Execute(ctx context.Context, progress Progress) (*Result, error) {
 	now := j.now
 	if now == nil {
 		now = time.Now
 	}
 
-	ids, err := j.sceneIDs(ctx)
-	if err != nil {
-		return nil, err
+	if !j.Scenes && !j.Tags {
+		return nil, errors.New("nothing to translate: select scenes or tags")
+	}
+	if len(j.Options.LanguageMappings) == 0 && (j.Tags || len(j.SceneIDs) == 0) {
+		return nil, errors.New("no language mapping configured")
 	}
 
-	logger.Infof("Translating metadata of %d scenes with %s", len(ids), j.Translator.Name())
-	progress.SetTotal(len(ids))
+	res := &Result{}
+	var sceneIDs, tagIDs []int
+	var err error
+	if j.Scenes {
+		res.Scenes = &Summary{}
+		if sceneIDs, err = j.sceneIDs(ctx); err != nil {
+			return nil, err
+		}
+	}
+	if j.Tags {
+		res.Tags = &TagSummary{}
+		if tagIDs, err = j.tagIDs(ctx); err != nil {
+			return nil, err
+		}
+	}
 
-	summary := &Summary{}
+	logger.Infof("Translating metadata of %d scenes and %d tags with %s", len(sceneIDs), len(tagIDs), j.Translator.Name())
+	progress.SetTotal(len(sceneIDs) + len(tagIDs))
+
 	consecutiveFailures := 0
-
-	for _, id := range ids {
+	// run translates one item. It returns true and an error if the batch
+	// must stop.
+	run := func(description string, failed *int, fn func() error) (bool, error) {
 		if job.IsCancelled(ctx) {
 			logger.Info("Stopping metadata translation due to user request")
-			break
+			return true, nil
 		}
 
-		var sceneErr error
-		progress.ExecuteTask(fmt.Sprintf("Translating scene %d", id), func() {
-			var t *SceneTranslation
-			t, sceneErr = TranslateAndApply(ctx, j.Repository, j.Translator, j.Hooks, id, j.Options, now())
-			if sceneErr != nil {
-				return
-			}
-			if t.Empty() {
-				summary.Skipped++
-				return
-			}
-			summary.Translated++
-		})
+		var itemErr error
+		progress.ExecuteTask(description, func() { itemErr = fn() })
 		progress.Increment()
 
-		if sceneErr != nil {
-			if ctx.Err() != nil {
-				break
-			}
-			summary.Failed++
-			consecutiveFailures++
-			logger.Errorf("Translating scene %d: %v", id, sceneErr)
-			if consecutiveFailures >= MaxConsecutiveFailures {
-				logger.Infof("Metadata translation: %s", summary)
-				return summary, fmt.Errorf("aborting after %d consecutive failures: %w", consecutiveFailures, sceneErr)
-			}
-			continue
+		if itemErr == nil {
+			consecutiveFailures = 0
+			return false, nil
 		}
-		consecutiveFailures = 0
+		if ctx.Err() != nil {
+			return true, nil
+		}
+		*failed++
+		consecutiveFailures++
+		logger.Errorf("%s: %v", description, itemErr)
+		if consecutiveFailures >= MaxConsecutiveFailures {
+			return true, fmt.Errorf("aborting after %d consecutive failures: %w", consecutiveFailures, itemErr)
+		}
+		return false, nil
 	}
 
-	logger.Infof("Metadata translation: %s", summary)
-	return summary, nil
+	finish := func(err error) (*Result, error) {
+		logger.Infof("Metadata translation: %s", res)
+		return res, err
+	}
+
+	for _, id := range sceneIDs {
+		stop, err := run(fmt.Sprintf("Translating scene %d", id), &res.Scenes.Failed, func() error {
+			t, err := TranslateAndApply(ctx, j.Repository, j.Translator, j.Hooks, id, j.Options, now())
+			if err != nil {
+				return err
+			}
+			if t.Empty() {
+				res.Scenes.Skipped++
+			} else {
+				res.Scenes.Translated++
+			}
+			return nil
+		})
+		if stop {
+			return finish(err)
+		}
+	}
+
+	for _, id := range tagIDs {
+		stop, err := run(fmt.Sprintf("Translating tag %d", id), &res.Tags.Failed, func() error {
+			t, err := TranslateTag(ctx, j.Repository, j.Translator, id, j.Options)
+			if err != nil {
+				return err
+			}
+			LogTagTranslation(t)
+			ExecuteTagHooks(ctx, j.TagHooks, t)
+			switch t.Action {
+			case TagRenamed:
+				res.Tags.Renamed++
+			case TagMerged:
+				res.Tags.Merged++
+			default:
+				res.Tags.Skipped++
+			}
+			return nil
+		})
+		if stop {
+			return finish(err)
+		}
+	}
+
+	return finish(nil)
 }

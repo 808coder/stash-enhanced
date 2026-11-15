@@ -127,10 +127,22 @@ input SceneTranslationApplyInput {
 }
 
 input TranslateMetadataInput {
+  "Translate scene titles and details. Defaults to true"
+  scenes: Boolean
   "Scenes to translate. If empty, all scenes with a mapped language tag are translated"
   sceneIds: [ID!]
-  "Re-translate fields from their original metadata, even if they are no longer in the source language"
+  "Re-translate scene fields from their original metadata, even if they are no longer in the source language"
   force: Boolean
+  """
+  Translate the names of all tags in a mapped source language. Tags are renamed
+  for every scene, image, gallery etc. and keep the old name as an alias. Defaults to false
+  """
+  tags: Boolean
+  """
+  If a tag's translation is the name or alias of another tag, merge the tag into it.
+  Otherwise the tag is skipped. Defaults to true
+  """
+  mergeOnCollision: Boolean
 }
 
 extend type Mutation {
@@ -142,6 +154,6 @@ extend type Mutation {
   sceneTranslateApply(input: SceneTranslationApplyInput!): Scene!
   "Writes the original metadata back and removes the translation custom fields"
   scenesRestoreOriginal(ids: [ID!]!): [Scene!]!
-  "Translates and saves scenes in a job. Returns the job ID"
+  "Translates and saves scenes and tags in a job. Returns the job ID"
   metadataTranslate(input: TranslateMetadataInput!): ID!
 }
