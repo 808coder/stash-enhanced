@@ -140,7 +140,7 @@ func (t *OpenAI) translateOne(ctx context.Context, text Text, from, to string) (
 		if t.cfg.SystemPrompt == DefaultSystemPrompt {
 			prompt = "default"
 		}
-		return "Translation request to %s (model %s, %s system prompt):\n%s", []interface{}{t.endpoint, t.cfg.Model, prompt, user}
+		return "Translation request to %s (model %s, %s, %s system prompt):\n%s", []interface{}{t.endpoint, t.cfg.Model, maskAPIKey(t.cfg.APIKey), prompt, user}
 	})
 
 	payload, err := json.Marshal(chatRequest{
@@ -186,6 +186,14 @@ func (t *OpenAI) translateOne(ctx context.Context, text Text, from, to string) (
 	}
 
 	return translated, nil
+}
+
+// maskAPIKey describes an API key for logs without revealing it.
+func maskAPIKey(key string) string {
+	if key == "" {
+		return "no API key"
+	}
+	return "API key ********"
 }
 
 func userMessage(text Text, from, to string) string {
