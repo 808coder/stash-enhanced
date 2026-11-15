@@ -47,6 +47,7 @@ func (db *Anonymiser) Anonymise(ctx context.Context) error {
 		return utils.Do([]func() error{
 			func() error { return db.deleteBlobs() },
 			func() error { return db.deleteStashIDs() },
+			func() error { return db.deleteTombstones() },
 			func() error { return db.clearOHistory() },
 			func() error { return db.clearWatchHistory() },
 			func() error { return db.anonymiseFolders(ctx) },
@@ -103,6 +104,15 @@ func (db *Anonymiser) deleteStashIDs() error {
 		func() error { return db.truncateTable("studio_stash_ids") },
 		func() error { return db.truncateTable("performer_stash_ids") },
 		func() error { return db.truncateTable("tag_stash_ids") },
+	})
+}
+
+// deleteTombstones empties the fork-owned Tombstone tables: they hold
+// titles, Paths and URLs of deleted scenes.
+func (db *Anonymiser) deleteTombstones() error {
+	return utils.Do([]func() error{
+		func() error { return db.truncateTable(tombstoneFileTable) },
+		func() error { return db.truncateTable(tombstoneTable) },
 	})
 }
 

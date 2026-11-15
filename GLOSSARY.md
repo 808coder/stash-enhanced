@@ -24,3 +24,17 @@ _Avoid_: language tag (for the mapping itself)
 The source-language text of a translated field, kept in the scene's custom fields (`original_title`, `original_details`) so it can be restored or re-translated. See `docs/adr/0001-original-metadata-in-custom-fields.md`.
 _Avoid_: source title, untranslated title
 
+
+## Tombstones
+
+**Tombstone**
+The record left behind for one scene that was deleted together with its file, by the user ("delete file") or by the Clean task. A frozen snapshot of the scene's identifying and descriptive data; related studio, performers and tags are kept as plain text. Only its reason can be edited. Stored in `fork_tombstones`, see `docs/adr/0002-fork-schema-outside-upstream-migrations.md`.
+_Avoid_: deleted scene, history entry, blacklist
+
+**Tombstone file**
+One of the files listed under a Tombstone: its Filename, Path, quality data and fingerprints (oshash, md5, phash). Stored in `fork_tombstone_files`.
+_Avoid_: deleted file
+
+**Origin**
+Why a Tombstone exists: `manual` (the user deleted the scene with its file) or `clean` (the Clean task removed the scene because its file was missing).
+_Avoid_: source, type
