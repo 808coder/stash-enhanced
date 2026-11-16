@@ -431,25 +431,109 @@ func tombstoneConditions(f *models.TombstoneFilter) []tombstoneCondition {
 	return ret
 }
 
+// tombstoneFirstFile selects a column of the first file (lowest id) of the
+// Tombstone aliased as t.
+func tombstoneFirstFile(col string) string {
+	return "(SELECT f." + col + " FROM " + tombstoneFileTable + " f WHERE f.tombstone_id = t.id ORDER BY f.id LIMIT 1)"
+}
+
+// tombstoneSorts maps the sort keys of a Tombstone query to SQL expressions
+// over fork_tombstones aliased as t. An expression yields NULL when the
+// Tombstone has no value for the key.
+var tombstoneSorts = map[string]string{
+	models.TombstoneSortDeletedAt:  "t.deleted_at",
+	models.TombstoneSortTitle:      "COALESCE(NULLIF(t.title, ''), NULLIF(t.original_title, '')) COLLATE NOCASE",
+	models.TombstoneSortOrigin:     "t.origin",
+	models.TombstoneSortReason:     "NULLIF(t.reason, '') COLLATE NOCASE",
+	models.TombstoneSortSize:       tombstoneFirstFile("size"),
+	models.TombstoneSortResolution: tombstoneFirstFile("height"),
+	models.TombstoneSortBasename:   "NULLIF(" + tombstoneFirstFile("basename") + ", '') COLLATE NOCASE",
+	models.TombstoneSortPhash:      tombstoneFirstFile("phash"),
+}
+
+// tombstoneOrderBy returns the ORDER BY clause for findFilter. Without a
+// sort it is newest first. Tombstones without a value for the sort key come
+// last in either direction; ties are broken newest first.
+func tombstoneOrderBy(findFilter *models.FindFilterType) (string, error) {
+	const newestFirst = "t.deleted_at DESC, t.id DESC"
+
+	sort := findFilter.GetSort("")
+	if sort == "" {
+		return " ORDER BY " + newestFirst, nil
+	}
+
+	expr, ok := tombstoneSorts[sort]
+	if !ok {
+		return "", fmt.Errorf("invalid tombstone sort %q", sort)
+	}
+
+	// GetDirection only ever returns ASC or DESC
+	dir := findFilter.GetDirection()
+
+	terms := []string{"(" + expr + ") IS NULL"}
+	if sort == models.TombstoneSortPhash {
+		// phashes are stored signed; order them as shown, by their hex string
+		terms = append(terms, "("+expr+") < 0 "+dir)
+	}
+	terms = append(terms, expr+" "+dir, newestFirst)
+
+	return " ORDER BY " + strings.Join(terms, ", "), nil
+}
+
 func (qb *TombstoneStore) Query(ctx context.Context, filter *models.TombstoneFilter, findFilter *models.FindFilterType) (*models.TombstoneQueryResult, error) {
 	if findFilter == nil {
 		findFilter = &models.FindFilterType{}
 	}
 
+	orderBy, err := tombstoneOrderBy(findFilter)
+	if err != nil {
+		return nil, err
+	}
+
 	conds := tombstoneConditions(filter)
 
-	where := ""
-	var whereArgs []interface{}
+	// the keys are ORed; the origin restricts that result
+	keysWhere := ""
+	var keysArgs []interface{}
 	if len(conds) > 0 {
 		parts := make([]string, len(conds))
 		for i, c := range conds {
 			parts[i] = c.sql
-			whereArgs = append(whereArgs, c.args...)
+			keysArgs = append(keysArgs, c.args...)
 		}
-		where = " WHERE " + strings.Join(parts, " OR ")
+		keysWhere = "(" + strings.Join(parts, " OR ") + ")"
 	}
 
+	whereParts := []string{}
+	whereArgs := append([]interface{}{}, keysArgs...)
+	if keysWhere != "" {
+		whereParts = append(whereParts, keysWhere)
+	}
+	if filter != nil && filter.Origin != nil {
+		whereParts = append(whereParts, "t.origin = ?")
+		whereArgs = append(whereArgs, string(*filter.Origin))
+	}
+
+	where := ""
+	if len(whereParts) > 0 {
+		where = " WHERE " + strings.Join(whereParts, " AND ")
+	}
 	from := " FROM " + tombstoneTable + " t" + where
+
+	// the counts per origin ignore the origin filter
+	var counts struct {
+		Manual int `db:"manual"`
+		Clean  int `db:"clean"`
+	}
+	countQuery := "SELECT COALESCE(SUM(t.origin = ?), 0) AS manual, COALESCE(SUM(t.origin = ?), 0) AS clean FROM " + tombstoneTable + " t"
+	countArgs := []interface{}{string(models.TombstoneOriginManual), string(models.TombstoneOriginClean)}
+	if keysWhere != "" {
+		countQuery += " WHERE " + keysWhere
+		countArgs = append(countArgs, keysArgs...)
+	}
+	if err := dbWrapper.Get(ctx, &counts, countQuery, countArgs...); err != nil {
+		return nil, fmt.Errorf("counting tombstones: %w", err)
+	}
 
 	var count int
 	if err := dbWrapper.Get(ctx, &count, "SELECT COUNT(*)"+from, whereArgs...); err != nil {
@@ -464,7 +548,7 @@ func (qb *TombstoneStore) Query(ctx context.Context, filter *models.TombstoneFil
 		selectArgs = append(selectArgs, c.args...)
 	}
 
-	query := "SELECT " + strings.Join(cols, ", ") + from + " ORDER BY t.deleted_at DESC, t.id DESC"
+	query := "SELECT " + strings.Join(cols, ", ") + from + orderBy
 	args := make([]interface{}, 0, len(selectArgs)+len(whereArgs)+2)
 	args = append(args, selectArgs...)
 	args = append(args, whereArgs...)
@@ -485,8 +569,10 @@ func (qb *TombstoneStore) Query(ctx context.Context, filter *models.TombstoneFil
 	}
 
 	ret := &models.TombstoneQueryResult{
-		Count:   count,
-		Matches: make([]*models.TombstoneMatch, len(tombstones)),
+		Count:       count,
+		ManualCount: counts.Manual,
+		CleanCount:  counts.Clean,
+		Matches:     make([]*models.TombstoneMatch, len(tombstones)),
 	}
 	for i, t := range tombstones {
 		ret.Matches[i] = &models.TombstoneMatch{Tombstone: t, MatchedKeys: matchedKeys[t.ID]}

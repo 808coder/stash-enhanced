@@ -100,8 +100,13 @@ input TombstonePhashFilterInput {
   distance: Int
 }
 
-"All keys are optional and combined with OR. No keys returns all Tombstones."
+"""
+All keys are optional and combined with OR. No keys returns all Tombstones.
+origin is not a key: it restricts the result (AND) and is never reported as a matched key.
+"""
 input TombstoneFilterInput {
+  "Only Tombstones of this Origin"
+  origin: TombstoneOrigin
   url: String
   stash_id: String
   oshash: String
@@ -124,7 +129,11 @@ type TombstoneMatch {
 type TombstoneQueryResult {
   "Total number of matches, not the page size"
   count: Int!
-  "Newest first"
+  "Number of MANUAL Tombstones matching the keys, ignoring the origin filter"
+  manual_count: Int!
+  "Number of CLEAN Tombstones matching the keys, ignoring the origin filter"
+  clean_count: Int!
+  "In the requested sort order, newest first by default"
   matches: [TombstoneMatch!]!
 }
 
@@ -135,7 +144,12 @@ input TombstoneUpdateInput {
 }
 
 extend type Query {
-  "Find Tombstones, newest first. Only page and per_page of filter are used."
+  """
+  Find Tombstones. Of filter, page, per_page, sort and direction are used.
+  sort is one of deleted_at (default, newest first), title, origin, reason,
+  size, resolution, basename, phash; the file sorts use the first file of a
+  Tombstone. Tombstones without a value for the sort key come last.
+  """
   findTombstones(
     tombstone_filter: TombstoneFilterInput
     filter: FindFilterType

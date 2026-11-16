@@ -195,10 +195,13 @@ type TombstonePhashInput struct {
 	Distance int
 }
 
-// TombstoneFilter selects Tombstones. Every non-empty field is one key; a
-// Tombstone matches when it matches at least one key (OR). An empty filter
-// matches every Tombstone.
+// TombstoneFilter selects Tombstones. Every non-empty field except Origin is
+// one key; a Tombstone matches when it matches at least one key (OR). A
+// filter without keys matches every Tombstone. Origin is not a key: it
+// restricts the result (AND) and is never reported as a matched key.
 type TombstoneFilter struct {
+	// Only Tombstones of this Origin. Nil matches every Origin.
+	Origin *TombstoneOrigin
 	// Exact match against the scene URLs.
 	URL string
 	// Exact match against the id of the scene stash IDs (any endpoint).
@@ -218,7 +221,7 @@ type TombstoneFilter struct {
 	Basename string
 }
 
-// IsEmpty reports whether the filter has no keys.
+// IsEmpty reports whether the filter has no keys. Origin is not a key.
 func (f *TombstoneFilter) IsEmpty() bool {
 	return f == nil || (f.URL == "" && f.StashID == "" && f.Oshash == "" && f.MD5 == "" &&
 		f.Code == "" && f.Phash == nil && f.Title == "" && f.Basename == "")
@@ -231,9 +234,26 @@ type TombstoneMatch struct {
 	MatchedKeys []TombstoneMatchKey `json:"matched_keys"`
 }
 
-// TombstoneQueryResult is one page of Tombstone matches, newest first, and
-// the total number of matching Tombstones.
+// TombstoneSort names the sort orders of a Tombstone query. The file sorts
+// use the first file of a Tombstone (lowest id).
+const (
+	TombstoneSortDeletedAt  = "deleted_at"
+	TombstoneSortTitle      = "title"
+	TombstoneSortOrigin     = "origin"
+	TombstoneSortReason     = "reason"
+	TombstoneSortSize       = "size"
+	TombstoneSortResolution = "resolution"
+	TombstoneSortBasename   = "basename"
+	TombstoneSortPhash      = "phash"
+)
+
+// TombstoneQueryResult is one page of Tombstone matches in the requested
+// sort order and the total number of matching Tombstones. ManualCount and
+// CleanCount are the totals per Origin of the Tombstones matching the filter
+// keys, ignoring the filter's Origin.
 type TombstoneQueryResult struct {
-	Count   int               `json:"count"`
-	Matches []*TombstoneMatch `json:"matches"`
+	Count       int               `json:"count"`
+	ManualCount int               `json:"manual_count"`
+	CleanCount  int               `json:"clean_count"`
+	Matches     []*TombstoneMatch `json:"matches"`
 }

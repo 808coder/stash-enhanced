@@ -76,7 +76,7 @@ func (r *tombstoneFileResolver) Phash(ctx context.Context, obj *models.Tombstone
 func (r *queryResolver) FindTombstones(ctx context.Context, tombstoneFilter *TombstoneFilterInput, filter *models.FindFilterType) (ret *models.TombstoneQueryResult, err error) {
 	var f *models.TombstoneFilter
 	if tombstoneFilter != nil {
-		f = &models.TombstoneFilter{}
+		f = &models.TombstoneFilter{Origin: tombstoneFilter.Origin}
 		if tombstoneFilter.URL != nil {
 			f.URL = *tombstoneFilter.URL
 		}

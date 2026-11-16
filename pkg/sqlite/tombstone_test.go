@@ -347,6 +347,136 @@ func TestTombstoneStore_QueryAllPaginated(t *testing.T) {
 	})
 }
 
+func TestTombstoneStore_QueryOrigin(t *testing.T) {
+	runWithRollbackTxn(t, "origin restricts the keys", func(t *testing.T, ctx context.Context) {
+		fx := createQueryFixture(t, ctx)
+		manual, clean := models.TombstoneOriginManual, models.TombstoneOriginClean
+
+		// origin alone is not a key: no matched keys are reported
+		res, err := db.Tombstone.Query(ctx, &models.TombstoneFilter{Origin: &clean}, nil)
+		require.NoError(t, err)
+		require.Len(t, res.Matches, 1)
+		assert.Equal(t, fx.b.ID, res.Matches[0].Tombstone.ID)
+		assert.Empty(t, res.Matches[0].MatchedKeys)
+		assert.Equal(t, 1, res.Count)
+		// the counts per origin ignore the origin filter
+		assert.Equal(t, 2, res.ManualCount)
+		assert.Equal(t, 1, res.CleanCount)
+
+		// keys are ORed, then restricted by origin
+		res, err = db.Tombstone.Query(ctx, &models.TombstoneFilter{
+			Origin: &manual,
+			Code:   "CODE-A",
+			MD5:    "md5-b2",
+		}, nil)
+		require.NoError(t, err)
+		require.Len(t, res.Matches, 1)
+		assert.Equal(t, fx.a.ID, res.Matches[0].Tombstone.ID)
+		assert.Equal(t, keys(models.TombstoneMatchKeyCode), res.Matches[0].MatchedKeys)
+		assert.Equal(t, 1, res.Count)
+		assert.Equal(t, 1, res.ManualCount)
+		assert.Equal(t, 1, res.CleanCount)
+
+		// without an origin the counts add up to the total
+		res, err = db.Tombstone.Query(ctx, nil, nil)
+		require.NoError(t, err)
+		assert.Equal(t, 3, res.Count)
+		assert.Equal(t, 2, res.ManualCount)
+		assert.Equal(t, 1, res.CleanCount)
+	})
+}
+
+func TestTombstoneStore_QuerySort(t *testing.T) {
+	runWithRollbackTxn(t, "sort", func(t *testing.T, ctx context.Context) {
+		// phashes sort by their hex string: 0x0f.. before 0xf0..
+		phashLow, phashHigh := int64(0x0f00000000000000), int64(-0x1000000000000000)
+
+		// oldest first; x has no title, reason or files
+		a := createTombstone(t, ctx, &models.Tombstone{
+			DeletedAt: time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
+			Origin:    models.TombstoneOriginManual,
+			Title:     "beta",
+			Reason:    "Duplicate",
+			Files: []*models.TombstoneFile{
+				{Basename: "b.mp4", Size: 300, Height: 720, Phash: &phashHigh},
+				// only the first file counts
+				{Basename: "0.mp4", Size: 1, Height: 1, Phash: &phashLow},
+			},
+		})
+		b := createTombstone(t, ctx, &models.Tombstone{
+			DeletedAt:     time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC),
+			Origin:        models.TombstoneOriginClean,
+			OriginalTitle: "Alpha",
+			Reason:        "broken",
+			Files:         []*models.TombstoneFile{{Basename: "C.mp4", Size: 100, Height: 2160, Phash: &phashLow}},
+		})
+		c := createTombstone(t, ctx, &models.Tombstone{
+			DeletedAt: time.Date(2026, 3, 1, 0, 0, 0, 0, time.UTC),
+			Origin:    models.TombstoneOriginManual,
+			Title:     "Gamma",
+			Files:     []*models.TombstoneFile{{Basename: "a.mp4", Size: 200, Height: 1080}},
+		})
+		x := createTombstone(t, ctx, &models.Tombstone{
+			DeletedAt: time.Date(2026, 4, 1, 0, 0, 0, 0, time.UTC),
+			Origin:    models.TombstoneOriginManual,
+		})
+
+		asc, desc := models.SortDirectionEnumAsc, models.SortDirectionEnumDesc
+
+		tests := []struct {
+			sort string
+			dir  models.SortDirectionEnum
+			want []int
+		}{
+			{models.TombstoneSortDeletedAt, asc, []int{a.ID, b.ID, c.ID, x.ID}},
+			{models.TombstoneSortDeletedAt, desc, []int{x.ID, c.ID, b.ID, a.ID}},
+			// case-insensitive, original title as fallback, untitled last
+			{models.TombstoneSortTitle, asc, []int{b.ID, a.ID, c.ID, x.ID}},
+			{models.TombstoneSortTitle, desc, []int{c.ID, a.ID, b.ID, x.ID}},
+			// ties newest first
+			{models.TombstoneSortOrigin, asc, []int{b.ID, x.ID, c.ID, a.ID}},
+			// no reason last in both directions
+			{models.TombstoneSortReason, asc, []int{b.ID, a.ID, x.ID, c.ID}},
+			{models.TombstoneSortReason, desc, []int{a.ID, b.ID, x.ID, c.ID}},
+			// file sorts use the first file; no file last
+			{models.TombstoneSortSize, asc, []int{b.ID, c.ID, a.ID, x.ID}},
+			{models.TombstoneSortSize, desc, []int{a.ID, c.ID, b.ID, x.ID}},
+			{models.TombstoneSortResolution, desc, []int{b.ID, c.ID, a.ID, x.ID}},
+			{models.TombstoneSortBasename, asc, []int{c.ID, a.ID, b.ID, x.ID}},
+			{models.TombstoneSortPhash, asc, []int{b.ID, a.ID, x.ID, c.ID}},
+			{models.TombstoneSortPhash, desc, []int{a.ID, b.ID, x.ID, c.ID}},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.sort+" "+tt.dir.String(), func(t *testing.T) {
+				sort, dir := tt.sort, tt.dir
+				res, err := db.Tombstone.Query(ctx, nil, &models.FindFilterType{Sort: &sort, Direction: &dir})
+				require.NoError(t, err)
+				got := []int{}
+				for _, m := range res.Matches {
+					got = append(got, m.Tombstone.ID)
+				}
+				assert.Equal(t, tt.want, got)
+			})
+		}
+
+		t.Run("sorted pages", func(t *testing.T) {
+			sort := models.TombstoneSortSize
+			res, err := db.Tombstone.Query(ctx, nil, &models.FindFilterType{Sort: &sort, Page: ptr(2), PerPage: ptr(2)})
+			require.NoError(t, err)
+			require.Len(t, res.Matches, 2)
+			assert.Equal(t, a.ID, res.Matches[0].Tombstone.ID)
+			assert.Equal(t, x.ID, res.Matches[1].Tombstone.ID)
+		})
+
+		t.Run("unknown sort is rejected", func(t *testing.T) {
+			sort := "id; DROP TABLE fork_tombstones"
+			_, err := db.Tombstone.Query(ctx, nil, &models.FindFilterType{Sort: &sort})
+			assert.Error(t, err)
+		})
+	})
+}
+
 func TestTombstoneStore_FindByFileFingerprints(t *testing.T) {
 	runWithRollbackTxn(t, "fingerprints", func(t *testing.T, ctx context.Context) {
 		fx := createQueryFixture(t, ctx)
