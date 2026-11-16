@@ -17,10 +17,23 @@ fragment TombstoneData on Tombstone {
   code
   date
   urls
+  stash_ids {
+    endpoint
+    stash_id
+  }
   original_title
+  original_details
   details
+  rating100
+  o_counter
+  play_count
+  scene_created_at
   studio {
     name
+    stash_ids {
+      endpoint
+      stash_id
+    }
   }
   performers {
     name
@@ -34,6 +47,7 @@ fragment TombstoneData on Tombstone {
       gender
     }
   }
+  tags
   tag_items {
     name
     tag {
@@ -49,6 +63,7 @@ fragment TombstoneData on Tombstone {
     width
     height
     video_codec
+    bit_rate
     oshash
     md5
     phash
