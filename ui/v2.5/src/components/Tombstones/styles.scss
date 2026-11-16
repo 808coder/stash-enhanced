@@ -292,3 +292,33 @@
     }
   }
 }
+
+// deletion reasons in the settings
+.tombstone-reasons-input {
+  .tombstone-reason-color {
+    flex: 0 0 8rem;
+  }
+
+  .tombstone-reason-preview {
+    align-items: center;
+    display: flex;
+    padding: 0 0.5rem;
+    width: 12rem;
+  }
+}
+
+.tombstone-reasons-value {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.tombstone-reasons-input,
+.tombstone-reasons-value {
+  .tombstone-reason-badge {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    vertical-align: middle;
+  }
+}

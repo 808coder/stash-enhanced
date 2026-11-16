@@ -641,11 +641,23 @@
       "set_name_date_details_from_metadata_if_present": "Set name, date, details from embedded file metadata"
     },
     "tombstones": {
+      "add_reason": "Add a reason",
       "deletion_reasons": "Deletion reasons",
-      "deletion_reasons_description": "Reasons selectable when deleting a scene together with its files. The order is kept. At least one reason is required.",
+      "deletion_reasons_description": "Reasons selectable when deleting a scene together with its files, each with a badge colour. The order is kept. At least one reason is required. A tombstone whose reason is no longer in this list shows a neutral badge.",
       "previously_deleted_tag": "Previously deleted tag",
       "previously_deleted_tag_default": "Previously deleted (default)",
       "previously_deleted_tag_description": "Tag added to rescanned scenes that match a manually deleted scene. If unset, a tag named \"Previously deleted\" is used.",
+      "reason_color": "Colour",
+      "reason_colors": {
+        "blue": "Blue",
+        "green": "Green",
+        "neutral": "Neutral",
+        "red": "Red",
+        "teal": "Teal",
+        "yellow": "Yellow"
+      },
+      "reason_name": "Reason",
+      "reasons_required": "At least one deletion reason is required.",
       "record": "Record tombstones",
       "record_description": "Keep a tombstone of a scene when it is deleted together with its files, so it can be recognised if it shows up again.",
       "title": "Tombstones"

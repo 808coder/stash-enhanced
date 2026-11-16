@@ -14,7 +14,7 @@ export const ReasonSelect: React.FC<{
   const intl = useIntl();
   const { configuration: config } = useConfigurationContext();
 
-  const reasons = config?.tombstones.reasons ?? [];
+  const reasons = (config?.tombstones.reasons ?? []).map((r) => r.name);
   const options =
     value && !reasons.includes(value) ? [value, ...reasons] : reasons;
 

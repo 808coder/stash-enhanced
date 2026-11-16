@@ -6,7 +6,8 @@ import { useToast } from "src/hooks/Toast";
 import { LoadingIndicator } from "../Shared/LoadingIndicator";
 import { TagIDSelect } from "../Tags/TagSelect";
 import { SettingSection } from "./SettingSection";
-import { BooleanSetting, Setting, StringListSetting } from "./Inputs";
+import { BooleanSetting, Setting } from "./Inputs";
+import { TombstoneReasonsSetting } from "./TombstoneReasonsSetting";
 
 export const SettingsTombstonesSection: React.FC = () => {
   const intl = useIntl();
@@ -43,7 +44,7 @@ export const SettingsTombstonesSection: React.FC = () => {
         checked={config.record}
         onChange={(v) => save({ record: v })}
       />
-      <StringListSetting
+      <TombstoneReasonsSetting
         id="tombstones-reasons"
         headingID="config.tombstones.deletion_reasons"
         subHeadingID="config.tombstones.deletion_reasons_description"

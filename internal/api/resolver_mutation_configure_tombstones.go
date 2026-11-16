@@ -25,7 +25,7 @@ func (r *mutationResolver) ConfigureTombstones(ctx context.Context, input Config
 
 	// validate before changing anything, so a rejected request leaves the
 	// configuration untouched
-	var reasons []string
+	var reasons []*config.TombstoneReason
 	if input.Reasons != nil {
 		var err error
 		if reasons, err = config.NormaliseTombstoneReasons(input.Reasons); err != nil {
