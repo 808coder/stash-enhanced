@@ -54,8 +54,8 @@
     column-gap: 12px;
     display: grid;
     grid-template-columns:
-      36px minmax(220px, 2fr) 128px 112px 160px 80px 72px
-      minmax(180px, 1.4fr) 150px 84px;
+      36px minmax(220px, 2fr) 128px 112px 120px 96px 72px
+      minmax(180px, 2fr) 130px 84px;
     padding: 0 1rem;
 
     > [role="cell"],
@@ -150,6 +150,12 @@
     overflow: hidden;
     text-overflow: ellipsis;
     vertical-align: middle;
+
+    // the details show the whole reason, line breaks included
+    &.wrap {
+      text-align: left;
+      white-space: pre-wrap;
+    }
   }
 
   .tombstone-mono {
@@ -234,10 +240,6 @@
     .tag-item {
       margin: 0;
     }
-  }
-
-  .tombstone-reason {
-    white-space: pre-wrap;
   }
 
   .matched-key {

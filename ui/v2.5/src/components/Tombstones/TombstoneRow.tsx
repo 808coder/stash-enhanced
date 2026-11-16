@@ -1,32 +1,22 @@
 import React from "react";
-import { Badge, Button } from "react-bootstrap";
+import { Button } from "react-bootstrap";
 import { FormattedMessage, useIntl } from "react-intl";
 import cx from "classnames";
 import {
-  faBolt,
   faChevronDown,
   faChevronRight,
   faPencilAlt,
   faTrash,
-  faUser,
 } from "@fortawesome/free-solid-svg-icons";
 import * as GQL from "src/core/generated-graphql";
 import TextUtils from "src/utils/text";
 import { ExpandCollapseButton } from "../Shared/CollapseButton";
-import { FileSize } from "../Shared/FileSize";
 import { Icon } from "../Shared/Icon";
 import { TruncatedText } from "../Shared/TruncatedText";
+import { OriginBadge, ReasonBadge } from "./TombstoneBadges";
+import { TombstoneFileSize } from "./TombstoneFileSize";
 import { PhashLink, TombstoneDetails } from "./TombstoneDetails";
 import { TombstoneData } from "./types";
-
-// Reasons are free text from a configurable list, so the colour is a best
-// effort on the default reasons and neutral for everything else.
-function reasonVariant(reason: string) {
-  if (/duplicate/i.test(reason)) return "info";
-  if (/replaced/i.test(reason)) return "success";
-  if (/quality|broken/i.test(reason)) return "warning";
-  return "secondary";
-}
 
 export const TombstoneRow: React.FC<{
   tombstone: TombstoneData;
@@ -50,7 +40,6 @@ export const TombstoneRow: React.FC<{
   const meta = [tombstone.studio?.name, tombstone.date]
     .filter((v) => !!v)
     .join(" · ");
-  const manual = tombstone.origin === GQL.TombstoneOrigin.Manual;
   // the first file is the one the file columns sort by
   const file = tombstone.files.length > 0 ? tombstone.files[0] : undefined;
   const moreFiles = tombstone.files.length - 1;
@@ -91,35 +80,11 @@ export const TombstoneRow: React.FC<{
           </div>
         </div>
         <div role="cell">
-          <Badge
-            pill
-            variant={manual ? "secondary" : "primary"}
-            title={intl.formatMessage({
-              id: manual
-                ? "tombstones.origin_manual"
-                : "tombstones.origin_clean",
-            })}
-          >
-            <Icon icon={manual ? faUser : faBolt} />{" "}
-            <FormattedMessage
-              id={
-                manual
-                  ? "tombstones.origin_manual_short"
-                  : "tombstones.origin_clean_short"
-              }
-            />
-          </Badge>
+          <OriginBadge origin={tombstone.origin} />
         </div>
         <div role="cell">
           {tombstone.reason ? (
-            <Badge
-              pill
-              variant={reasonVariant(tombstone.reason)}
-              className="tombstone-reason-badge"
-              title={tombstone.reason}
-            >
-              {tombstone.reason}
-            </Badge>
+            <ReasonBadge reason={tombstone.reason} />
           ) : (
             <span className="text-muted">
               <FormattedMessage id="tombstones.no_reason_short" />
@@ -127,7 +92,7 @@ export const TombstoneRow: React.FC<{
           )}
         </div>
         <div role="cell" className="tombstone-mono text-right">
-          {file ? <FileSize size={file.size} /> : "—"}
+          {file ? <TombstoneFileSize size={file.size} /> : "—"}
         </div>
         <div
           role="cell"

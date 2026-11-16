@@ -10,8 +10,9 @@ import NavUtils from "src/utils/navigation";
 import { getStashboxBase } from "src/utils/stashbox";
 import TextUtils from "src/utils/text";
 import { ExternalLink } from "../Shared/ExternalLink";
-import { FileSize } from "../Shared/FileSize";
 import { Icon } from "../Shared/Icon";
+import { OriginBadge, ReasonBadge } from "./TombstoneBadges";
+import { TombstoneFileSize } from "./TombstoneFileSize";
 import { TombstoneData, TombstoneFile, TombstonePerformer } from "./types";
 
 // "BASENAME" is shown to users as "Filename"
@@ -185,7 +186,7 @@ const TombstoneFileDetails: React.FC<{ file: TombstoneFile }> = ({ file }) => (
       <FormattedMessage id="tombstones.file" />
     </dt>
     <dd className="tombstone-mono">
-      <FileSize size={file.size} />
+      <TombstoneFileSize size={file.size} />
       {file.width && file.height ? ` · ${file.width}×${file.height}` : ""}
       {file.video_codec ? ` · ${file.video_codec}` : ""}
     </dd>
@@ -239,21 +240,20 @@ export const TombstoneDetails: React.FC<{
             <FormattedMessage id="tombstones.deleted" />
           </dt>
           <dd>
-            {TextUtils.formatDateTime(intl, tombstone.deleted_at)}
-            {" · "}
-            <FormattedMessage
-              id={
-                tombstone.origin === GQL.TombstoneOrigin.Manual
-                  ? "tombstones.origin_manual"
-                  : "tombstones.origin_clean"
-              }
-            />
+            {TextUtils.formatDateTime(intl, tombstone.deleted_at)}{" "}
+            <OriginBadge origin={tombstone.origin} />
           </dd>
           <dt>
             <FormattedMessage id="tombstones.reason" />
           </dt>
-          <dd className="tombstone-reason">
-            {tombstone.reason || <FormattedMessage id="tombstones.no_reason" />}
+          <dd>
+            {tombstone.reason ? (
+              <ReasonBadge reason={tombstone.reason} wrap />
+            ) : (
+              <span className="text-muted">
+                <FormattedMessage id="tombstones.no_reason" />
+              </span>
+            )}
           </dd>
           {matchedKeys.length > 0 && (
             <>
