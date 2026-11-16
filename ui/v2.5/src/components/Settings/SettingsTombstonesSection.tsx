@@ -65,6 +65,8 @@ export const SettingsTombstonesSection: React.FC = () => {
             noSelectionString={intl.formatMessage({
               id: "config.tombstones.previously_deleted_tag_default",
             })}
+            // render the menu in a portal so the settings card does not clip it
+            menuPortalTarget={document.body}
           />
         </div>
       </div>
