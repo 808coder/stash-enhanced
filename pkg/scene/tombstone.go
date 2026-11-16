@@ -99,8 +99,8 @@ func (s *Service) snapshot(ctx context.Context, scene *models.Scene) (*models.To
 		Date:            scene.Date,
 		URLs:            scene.URLs.List(),
 		StashIDs:        toTombstoneStashIDs(scene.StashIDs.List()),
-		OriginalTitle:   customFieldString(customFields, models.CustomFieldOriginalTitle),
-		OriginalDetails: customFieldString(customFields, models.CustomFieldOriginalDetails),
+		OriginalTitle:   models.CustomFieldString(customFields, models.CustomFieldOriginalTitle),
+		OriginalDetails: models.CustomFieldString(customFields, models.CustomFieldOriginalDetails),
 		Details:         scene.Details,
 		Rating:          scene.Rating,
 		OCounter:        oCount,
@@ -125,7 +125,7 @@ func (s *Service) snapshot(ctx context.Context, scene *models.Scene) (*models.To
 	return t, nil
 }
 
-func (s *Service) snapshotStudio(ctx context.Context, studioID *int) (*models.TombstoneEntity, error) {
+func (s *Service) snapshotStudio(ctx context.Context, studioID *int) (*models.TombstoneStudio, error) {
 	if studioID == nil {
 		return nil, nil
 	}
@@ -142,7 +142,7 @@ func (s *Service) snapshotStudio(ctx context.Context, studioID *int) (*models.To
 		return nil, fmt.Errorf("loading studio stash ids: %w", err)
 	}
 
-	return &models.TombstoneEntity{
+	return &models.TombstoneStudio{
 		Name:     studio.Name,
 		StashIDs: toTombstoneStashIDs(studio.StashIDs.List()),
 	}, nil
@@ -250,9 +250,4 @@ func removedTombstoneFiles(removed []*models.VideoFile, scene *models.Scene) []*
 		}
 	}
 	return ret
-}
-
-func customFieldString(fields map[string]interface{}, key string) string {
-	s, _ := fields[key].(string)
-	return s
 }

@@ -1,12 +1,12 @@
 import React from "react";
-import { FormattedMessage, useIntl } from "react-intl";
+import { useIntl } from "react-intl";
 import * as GQL from "src/core/generated-graphql";
 import { evictQueries, useConfiguration } from "src/core/StashService";
 import { useToast } from "src/hooks/Toast";
 import { LoadingIndicator } from "../Shared/LoadingIndicator";
 import { TagIDSelect } from "../Tags/TagSelect";
 import { SettingSection } from "./SettingSection";
-import { BooleanSetting, StringListSetting } from "./Inputs";
+import { BooleanSetting, Setting, StringListSetting } from "./Inputs";
 
 export const SettingsTombstonesSection: React.FC = () => {
   const intl = useIntl();
@@ -50,33 +50,25 @@ export const SettingsTombstonesSection: React.FC = () => {
         value={config.reasons}
         onChange={(v) => save({ reasons: v })}
       />
-      <div className="setting">
-        <div>
-          <h3>
-            <FormattedMessage id="config.tombstones.previously_deleted_tag" />
-          </h3>
-          <div className="sub-heading">
-            <FormattedMessage id="config.tombstones.previously_deleted_tag_description" />
-          </div>
-        </div>
-        <div>
-          <TagIDSelect
-            ids={
-              config.previouslyDeletedTagId
-                ? [config.previouslyDeletedTagId]
-                : []
-            }
-            onSelect={(items) =>
-              save({ previouslyDeletedTagId: items[0]?.id ?? "" })
-            }
-            noSelectionString={intl.formatMessage({
-              id: "config.tombstones.previously_deleted_tag_default",
-            })}
-            // render the menu in a portal so the settings card does not clip it
-            menuPortalTarget={document.body}
-          />
-        </div>
-      </div>
+      <Setting
+        id="tombstones-previously-deleted-tag"
+        headingID="config.tombstones.previously_deleted_tag"
+        subHeadingID="config.tombstones.previously_deleted_tag_description"
+      >
+        <TagIDSelect
+          ids={
+            config.previouslyDeletedTagId ? [config.previouslyDeletedTagId] : []
+          }
+          onSelect={(items) =>
+            save({ previouslyDeletedTagId: items[0]?.id ?? "" })
+          }
+          noSelectionString={intl.formatMessage({
+            id: "config.tombstones.previously_deleted_tag_default",
+          })}
+          // render the menu in a portal so the settings card does not clip it
+          menuPortalTarget={document.body}
+        />
+      </Setting>
     </SettingSection>
   );
 };

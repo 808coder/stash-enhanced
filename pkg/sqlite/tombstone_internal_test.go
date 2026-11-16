@@ -25,3 +25,10 @@ func TestTombstoneRow_DecodesPerformersWithoutGenderOrID(t *testing.T) {
 		StashIDs: []models.TombstoneStashID{{Endpoint: "https://stashdb.org/graphql", StashID: "old-uuid"}},
 	}}, got.Performers)
 }
+
+func TestTombstoneSorts_CoverEveryKey(t *testing.T) {
+	for _, key := range models.AllTombstoneSort {
+		assert.Contains(t, tombstoneSorts, key)
+	}
+	assert.Len(t, tombstoneSorts, len(models.AllTombstoneSort))
+}

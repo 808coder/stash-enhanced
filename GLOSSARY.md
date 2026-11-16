@@ -28,7 +28,7 @@ _Avoid_: source title, untranslated title
 ## Tombstones
 
 **Tombstone**
-The record left behind for one scene that was deleted together with its file, by the user ("delete file") or by the Clean task. A frozen snapshot of the scene's identifying and descriptive data; related studio, performers and tags are kept as plain text. Only its reason can be edited. Stored in `fork_tombstones`, see `docs/adr/0002-fork-schema-outside-upstream-migrations.md`.
+The record left behind for one scene that was deleted together with its file, by the user ("delete file") or by the Clean task. A frozen snapshot of the scene's identifying and descriptive data; the related studio, performers and tags are kept by name; studio and performers also keep their stash IDs, and performers their former id and gender. Only its reason can be edited. Stored in `fork_tombstones`, see `docs/adr/0002-fork-schema-outside-upstream-migrations.md`.
 _Avoid_: deleted scene, history entry, blacklist
 
 **Tombstone file**

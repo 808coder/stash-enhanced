@@ -136,7 +136,7 @@ func (r *tombstoneRow) resolve() (*models.Tombstone, error) {
 	}
 
 	if r.Studio.Valid && r.Studio.String != "" {
-		ret.Studio = &models.TombstoneEntity{}
+		ret.Studio = &models.TombstoneStudio{}
 		if err := json.Unmarshal([]byte(r.Studio.String), ret.Studio); err != nil {
 			return nil, fmt.Errorf("decoding tombstone %d studio: %w", r.ID, err)
 		}
@@ -371,12 +371,6 @@ func tombstoneFileCondition(cond string) string {
 	return "EXISTS (SELECT 1 FROM " + tombstoneFileTable + " f WHERE f.tombstone_id = t.id AND " + cond + ")"
 }
 
-// escapeLike escapes LIKE wildcards so that s matches literally with
-// ESCAPE '\'.
-func escapeLike(s string) string {
-	return strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`).Replace(s)
-}
-
 func containsPattern(s string) string {
 	return "%" + escapeLike(s) + "%"
 }
@@ -442,7 +436,7 @@ func tombstoneFirstFile(col string) string {
 // tombstoneSorts maps the sort keys of a Tombstone query to SQL expressions
 // over fork_tombstones aliased as t. An expression yields NULL when the
 // Tombstone has no value for the key.
-var tombstoneSorts = map[string]string{
+var tombstoneSorts = map[models.TombstoneSort]string{
 	models.TombstoneSortDeletedAt:  "t.deleted_at",
 	models.TombstoneSortTitle:      "COALESCE(NULLIF(t.title, ''), NULLIF(t.original_title, '')) COLLATE NATURAL_CI",
 	models.TombstoneSortOrigin:     "t.origin",
@@ -466,7 +460,7 @@ func tombstoneOrderBy(findFilter *models.FindFilterType) (string, error) {
 		return " ORDER BY " + newestFirst, nil
 	}
 
-	expr, ok := tombstoneSorts[sort]
+	expr, ok := tombstoneSorts[models.TombstoneSort(sort)]
 	if !ok {
 		return "", fmt.Errorf("invalid tombstone sort %q", sort)
 	}
@@ -475,7 +469,7 @@ func tombstoneOrderBy(findFilter *models.FindFilterType) (string, error) {
 	dir := findFilter.GetDirection()
 
 	terms := []string{"(" + expr + ") IS NULL"}
-	if sort == models.TombstoneSortPhash {
+	if models.TombstoneSort(sort) == models.TombstoneSortPhash {
 		// phashes are stored signed; order them as shown, by their hex string
 		terms = append(terms, "("+expr+") < 0 "+dir)
 	}

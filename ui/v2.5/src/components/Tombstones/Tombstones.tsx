@@ -34,6 +34,8 @@ function getFilter(term: string): GQL.TombstoneFilterInput | undefined {
   };
 }
 
+// Keep in sync with models.AllTombstoneSort and the findTombstones sort
+// docstring in graphql/schema/types/tombstone.graphql.
 type SortKey =
   | "title"
   | "deleted_at"

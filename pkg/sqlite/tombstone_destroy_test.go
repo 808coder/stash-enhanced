@@ -78,7 +78,7 @@ func TestTombstone_SceneDestroySnapshotIsFrozen(t *testing.T) {
 		assert.Equal(t, models.TombstoneOriginClean, before.Origin)
 		assert.Equal(t, "Original frozen title", before.OriginalTitle)
 		assert.Equal(t, []string{"https://example.com/frozen"}, before.URLs)
-		assert.Equal(t, &models.TombstoneEntity{
+		assert.Equal(t, &models.TombstoneStudio{
 			Name:     "Frozen destroy studio",
 			StashIDs: []models.TombstoneStashID{{Endpoint: stashdb, StashID: "studio-uuid"}},
 		}, before.Studio)

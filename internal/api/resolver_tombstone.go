@@ -45,9 +45,9 @@ func (r *tombstoneResolver) TagItems(ctx context.Context, obj *models.Tombstone)
 	ret := make([]*TombstoneTag, len(obj.Tags))
 	if err := r.withReadTxn(ctx, func(ctx context.Context) error {
 		for i, name := range obj.Tags {
-			tag, err := scene.FindTombstoneTag(ctx, r.repository.Tag, name)
+			tag, err := r.repository.Tag.FindByName(ctx, name, true)
 			if err != nil {
-				return err
+				return fmt.Errorf("finding tag by name: %w", err)
 			}
 			ret[i] = &TombstoneTag{Name: name, Tag: tag}
 		}

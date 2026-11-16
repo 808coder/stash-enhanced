@@ -111,13 +111,6 @@ type scenePlan struct {
 	warnings []string
 }
 
-func customFieldString(fields map[string]interface{}, key string) string {
-	if v, ok := fields[key].(string); ok {
-		return v
-	}
-	return ""
-}
-
 // sceneLanguages returns the language codes of the scene's mapped language
 // tags, sorted and without duplicates.
 func sceneLanguages(tagIDs []int, mappings map[int]string) []string {
@@ -180,14 +173,14 @@ func planScene(d sceneData, opts Options) scenePlan {
 		p.warnings = append(p.warnings, fmt.Sprintf("scene has several language tags: %s", strings.Join(langs, ", ")))
 	}
 
-	storedLang := customFieldString(d.customFields, CustomFieldSourceLanguage)
+	storedLang := models.CustomFieldString(d.customFields, CustomFieldSourceLanguage)
 
 	var warning string
-	p.title, warning = planField("title", d.title, customFieldString(d.customFields, models.CustomFieldOriginalTitle), storedLang, langs, opts.Force)
+	p.title, warning = planField("title", d.title, models.CustomFieldString(d.customFields, models.CustomFieldOriginalTitle), storedLang, langs, opts.Force)
 	if warning != "" {
 		p.warnings = append(p.warnings, warning)
 	}
-	p.details, warning = planField("details", d.details, customFieldString(d.customFields, models.CustomFieldOriginalDetails), storedLang, langs, opts.Force)
+	p.details, warning = planField("details", d.details, models.CustomFieldString(d.customFields, models.CustomFieldOriginalDetails), storedLang, langs, opts.Force)
 	if warning != "" {
 		p.warnings = append(p.warnings, warning)
 	}
@@ -216,8 +209,8 @@ func titleContext(d sceneData, p scenePlan) string {
 	switch {
 	case p.details != nil:
 		details = p.details.source
-	case customFieldString(d.customFields, models.CustomFieldOriginalDetails) != "":
-		details = customFieldString(d.customFields, models.CustomFieldOriginalDetails)
+	case models.CustomFieldString(d.customFields, models.CustomFieldOriginalDetails) != "":
+		details = models.CustomFieldString(d.customFields, models.CustomFieldOriginalDetails)
 	}
 	if strings.TrimSpace(details) != "" {
 		lines = append(lines, "Details: "+details)

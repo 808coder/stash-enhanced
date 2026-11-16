@@ -117,9 +117,9 @@ type TombstoneStashID struct {
 	StashID  string `json:"stash_id"`
 }
 
-// TombstoneEntity is a frozen related entity (studio or performer):
-// its name as plain text plus its stash IDs.
-type TombstoneEntity struct {
+// TombstoneStudio is a frozen studio: its name as plain text plus its stash
+// IDs.
+type TombstoneStudio struct {
 	Name     string             `json:"name"`
 	StashIDs []TombstoneStashID `json:"stash_ids"`
 }
@@ -162,7 +162,7 @@ type Tombstone struct {
 	// SceneCreatedAt is when the scene was added to the library.
 	SceneCreatedAt time.Time `json:"scene_created_at"`
 
-	Studio     *TombstoneEntity     `json:"studio"`
+	Studio     *TombstoneStudio     `json:"studio"`
 	Performers []TombstonePerformer `json:"performers"`
 	Tags       []string             `json:"tags"`
 
@@ -252,18 +252,34 @@ type TombstoneMatch struct {
 	MatchedKeys []TombstoneMatchKey `json:"matched_keys"`
 }
 
-// TombstoneSort names the sort orders of a Tombstone query. The file sorts
-// use the first file of a Tombstone (lowest id).
+// TombstoneSort is a sort order of a Tombstone query. The file sorts use the
+// first file of a Tombstone (lowest id).
+type TombstoneSort string
+
 const (
-	TombstoneSortDeletedAt  = "deleted_at"
-	TombstoneSortTitle      = "title"
-	TombstoneSortOrigin     = "origin"
-	TombstoneSortReason     = "reason"
-	TombstoneSortSize       = "size"
-	TombstoneSortResolution = "resolution"
-	TombstoneSortBasename   = "basename"
-	TombstoneSortPhash      = "phash"
+	TombstoneSortDeletedAt  TombstoneSort = "deleted_at"
+	TombstoneSortTitle      TombstoneSort = "title"
+	TombstoneSortOrigin     TombstoneSort = "origin"
+	TombstoneSortReason     TombstoneSort = "reason"
+	TombstoneSortSize       TombstoneSort = "size"
+	TombstoneSortResolution TombstoneSort = "resolution"
+	TombstoneSortBasename   TombstoneSort = "basename"
+	TombstoneSortPhash      TombstoneSort = "phash"
 )
+
+// AllTombstoneSort lists every TombstoneSort. Keep it in sync with the sort
+// docstring of findTombstones in graphql/schema/types/tombstone.graphql and
+// SortKey in ui/v2.5/src/components/Tombstones/Tombstones.tsx.
+var AllTombstoneSort = []TombstoneSort{
+	TombstoneSortDeletedAt,
+	TombstoneSortTitle,
+	TombstoneSortOrigin,
+	TombstoneSortReason,
+	TombstoneSortSize,
+	TombstoneSortResolution,
+	TombstoneSortBasename,
+	TombstoneSortPhash,
+}
 
 // TombstoneQueryResult is one page of Tombstone matches in the requested
 // sort order and the total number of matching Tombstones. ManualCount and

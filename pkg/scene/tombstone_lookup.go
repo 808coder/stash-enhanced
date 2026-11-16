@@ -52,18 +52,3 @@ func FindTombstonePerformer(ctx context.Context, r TombstonePerformerFinder, p m
 
 	return nil, nil
 }
-
-// TombstoneTagFinder finds library tags by name.
-type TombstoneTagFinder interface {
-	FindByName(ctx context.Context, name string, nocase bool) (*models.Tag, error)
-}
-
-// FindTombstoneTag returns the library tag named like a frozen Tombstone tag,
-// ignoring case, or nil when there is none.
-func FindTombstoneTag(ctx context.Context, r TombstoneTagFinder, name string) (*models.Tag, error) {
-	tag, err := r.FindByName(ctx, name, true)
-	if err != nil {
-		return nil, fmt.Errorf("finding tag by name: %w", err)
-	}
-	return tag, nil
-}

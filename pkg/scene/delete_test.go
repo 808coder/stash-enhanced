@@ -153,7 +153,7 @@ func expectedTombstone(origin models.TombstoneOrigin, reason string) *models.Tom
 		OCounter:        3,
 		PlayCount:       7,
 		SceneCreatedAt:  destroySceneCreatedAt,
-		Studio: &models.TombstoneEntity{
+		Studio: &models.TombstoneStudio{
 			Name:     "Studio A",
 			StashIDs: []models.TombstoneStashID{{Endpoint: stashdb, StashID: "studio-stash-id"}},
 		},

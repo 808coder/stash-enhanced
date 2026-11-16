@@ -3,6 +3,10 @@
 
 package sqlite_test
 
+// These tests stay in pkg/sqlite although they exercise pkg/scene: they need
+// real performers, stash IDs and names from the database, and the
+// pkg/scene tests have no database setup.
+
 import (
 	"context"
 	"testing"
@@ -81,22 +85,6 @@ func TestFindTombstonePerformer_AmbiguousNameDoesNotMatch(t *testing.T) {
 		got := lookupPerformerID(t, ctx, models.TombstonePerformer{Name: "Common name"})
 
 		assert.Zero(t, got)
-	})
-}
-
-func TestFindTombstoneTag_ByNameIgnoringCase(t *testing.T) {
-	runWithRollbackTxn(t, "tag by name", func(t *testing.T, ctx context.Context) {
-		tag := &models.Tag{Name: "Lookup Tag"}
-		require.NoError(t, db.Tag.Create(ctx, &models.CreateTagInput{Tag: tag}))
-
-		got, err := scene.FindTombstoneTag(ctx, db.Tag, "lookup tag")
-		require.NoError(t, err)
-		require.NotNil(t, got)
-		assert.Equal(t, tag.ID, got.ID)
-
-		missing, err := scene.FindTombstoneTag(ctx, db.Tag, "Deleted tag")
-		require.NoError(t, err)
-		assert.Nil(t, missing)
 	})
 }
 

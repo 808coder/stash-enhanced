@@ -26,7 +26,7 @@ type TombstoneStashID {
 }
 
 "A studio frozen into a Tombstone"
-type TombstoneEntity {
+type TombstoneStudio {
   name: String!
   stash_ids: [TombstoneStashID!]!
 }
@@ -84,7 +84,7 @@ type Tombstone {
   o_counter: Int!
   play_count: Int!
   scene_created_at: Time!
-  studio: TombstoneEntity
+  studio: TombstoneStudio
   performers: [TombstonePerformer!]!
   "Tag names"
   tags: [String!]!

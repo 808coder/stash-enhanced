@@ -38,7 +38,7 @@ func fullTombstone() *models.Tombstone {
 		OCounter:        3,
 		PlayCount:       7,
 		SceneCreatedAt:  time.Date(2020, 5, 6, 7, 8, 9, 0, time.UTC),
-		Studio: &models.TombstoneEntity{
+		Studio: &models.TombstoneStudio{
 			Name:     "Studio name",
 			StashIDs: []models.TombstoneStashID{{Endpoint: "https://stashdb.org/graphql", StashID: "studio-uuid"}},
 		},
@@ -130,7 +130,7 @@ func TestTombstoneStore_FrozenAfterRelatedDeleted(t *testing.T) {
 
 		ts := createTombstone(t, ctx, &models.Tombstone{
 			Origin:     models.TombstoneOriginManual,
-			Studio:     &models.TombstoneEntity{Name: studio.Name},
+			Studio:     &models.TombstoneStudio{Name: studio.Name},
 			Performers: []models.TombstonePerformer{{ID: performer.ID, Name: performer.Name}},
 			Tags:       []string{tag.Name},
 		})
@@ -511,7 +511,7 @@ func TestTombstoneStore_QuerySort(t *testing.T) {
 		asc, desc := models.SortDirectionEnumAsc, models.SortDirectionEnumDesc
 
 		tests := []struct {
-			sort string
+			sort models.TombstoneSort
 			dir  models.SortDirectionEnum
 			want []int
 		}{
@@ -535,8 +535,8 @@ func TestTombstoneStore_QuerySort(t *testing.T) {
 		}
 
 		for _, tt := range tests {
-			t.Run(tt.sort+" "+tt.dir.String(), func(t *testing.T) {
-				sort, dir := tt.sort, tt.dir
+			t.Run(string(tt.sort)+" "+tt.dir.String(), func(t *testing.T) {
+				sort, dir := string(tt.sort), tt.dir
 				res, err := db.Tombstone.Query(ctx, nil, &models.FindFilterType{Sort: &sort, Direction: &dir})
 				require.NoError(t, err)
 				got := []int{}
@@ -548,7 +548,7 @@ func TestTombstoneStore_QuerySort(t *testing.T) {
 		}
 
 		t.Run("sorted pages", func(t *testing.T) {
-			sort := models.TombstoneSortSize
+			sort := string(models.TombstoneSortSize)
 			res, err := db.Tombstone.Query(ctx, nil, &models.FindFilterType{Sort: &sort, Page: ptr(2), PerPage: ptr(2)})
 			require.NoError(t, err)
 			require.Len(t, res.Matches, 2)
@@ -576,9 +576,9 @@ func TestTombstoneStore_QuerySort(t *testing.T) {
 		}
 		s10, s2, s1 := create(10), create(2), create(1)
 
-		for _, sort := range []string{models.TombstoneSortTitle, models.TombstoneSortBasename} {
-			t.Run(sort, func(t *testing.T) {
-				sort, dir := sort, models.SortDirectionEnumAsc
+		for _, sort := range []models.TombstoneSort{models.TombstoneSortTitle, models.TombstoneSortBasename} {
+			t.Run(string(sort), func(t *testing.T) {
+				sort, dir := string(sort), models.SortDirectionEnumAsc
 				res, err := db.Tombstone.Query(ctx, nil, &models.FindFilterType{Sort: &sort, Direction: &dir})
 				require.NoError(t, err)
 				got := []int{}
@@ -608,7 +608,7 @@ func TestTombstoneStore_QuerySort(t *testing.T) {
 			{models.SortDirectionEnumDesc, []int{newest.ID, middle.ID, oldest.ID, broken.ID}},
 		} {
 			t.Run(tt.dir.String(), func(t *testing.T) {
-				sort, dir := models.TombstoneSortReason, tt.dir
+				sort, dir := string(models.TombstoneSortReason), tt.dir
 				res, err := db.Tombstone.Query(ctx, nil, &models.FindFilterType{Sort: &sort, Direction: &dir})
 				require.NoError(t, err)
 				got := []int{}
