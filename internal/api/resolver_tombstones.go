@@ -2,7 +2,6 @@ package api
 
 import (
 	"context"
-	"errors"
 	"strings"
 
 	"github.com/stashapp/stash/internal/manager/config"
@@ -28,9 +27,9 @@ func (r *mutationResolver) ConfigureTombstones(ctx context.Context, input Config
 	// configuration untouched
 	var reasons []string
 	if input.Reasons != nil {
-		reasons = config.NormaliseTombstoneReasons(input.Reasons)
-		if len(reasons) == 0 {
-			return makeConfigTombstonesResult(), errors.New("at least one deletion reason is required")
+		var err error
+		if reasons, err = config.NormaliseTombstoneReasons(input.Reasons); err != nil {
+			return makeConfigTombstonesResult(), err
 		}
 	}
 

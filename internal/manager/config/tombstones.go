@@ -1,6 +1,9 @@
 package config
 
-import "strings"
+import (
+	"errors"
+	"strings"
+)
 
 // Scene tombstone options. Kept in their own file to limit merge conflicts
 // with upstream config.go.
@@ -38,9 +41,14 @@ func (i *Config) GetTombstonesReasons() []string {
 	return v.Strings(TombstonesReasons)
 }
 
+// ErrNoTombstoneReasons is returned when a reasons list is empty after
+// normalising: at least one deletion reason is required.
+var ErrNoTombstoneReasons = errors.New("at least one deletion reason is required")
+
 // NormaliseTombstoneReasons trims each entry, drops empty entries and drops
-// case-insensitive duplicates, keeping the first.
-func NormaliseTombstoneReasons(in []string) []string {
+// case-insensitive duplicates, keeping the first. It returns
+// ErrNoTombstoneReasons if nothing is left.
+func NormaliseTombstoneReasons(in []string) ([]string, error) {
 	seen := make(map[string]struct{}, len(in))
 	ret := make([]string, 0, len(in))
 	for _, r := range in {
@@ -55,7 +63,10 @@ func NormaliseTombstoneReasons(in []string) []string {
 		seen[k] = struct{}{}
 		ret = append(ret, r)
 	}
-	return ret
+	if len(ret) == 0 {
+		return nil, ErrNoTombstoneReasons
+	}
+	return ret, nil
 }
 
 // GetTombstonesRecord returns true if tombstones are recorded when scenes are

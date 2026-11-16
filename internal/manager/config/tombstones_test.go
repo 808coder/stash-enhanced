@@ -34,11 +34,17 @@ func TestConfig_TombstonesReasonsSet(t *testing.T) {
 }
 
 func TestNormaliseTombstoneReasons(t *testing.T) {
-	assert.Equal(t,
-		[]string{"Duplicate", "Low quality"},
-		NormaliseTombstoneReasons([]string{"  Duplicate ", "", "   ", "duplicate", "Low quality", "LOW QUALITY"}),
-	)
-	assert.Empty(t, NormaliseTombstoneReasons([]string{" ", ""}))
+	got, err := NormaliseTombstoneReasons([]string{"  Duplicate ", "", "   ", "duplicate", "Low quality", "LOW QUALITY"})
+	assert.NoError(t, err)
+	assert.Equal(t, []string{"Duplicate", "Low quality"}, got)
+}
+
+func TestNormaliseTombstoneReasons_rejectsEmptyList(t *testing.T) {
+	for _, in := range [][]string{{}, {" ", ""}, {"\t"}} {
+		got, err := NormaliseTombstoneReasons(in)
+		assert.ErrorIs(t, err, ErrNoTombstoneReasons, "input %q", in)
+		assert.Nil(t, got)
+	}
 }
 
 func TestConfig_TombstonesSettings(t *testing.T) {
