@@ -35,7 +35,7 @@ func (s *Manager) TranslateMetadata(ctx context.Context, opts TranslateMetadataO
 	t := &translation.Job{
 		Repository: s.Repository,
 		Translator: tr,
-		Hooks:      s.PluginCache,
+		SceneHooks: s.PluginCache,
 		TagHooks:   s.PluginCache,
 		Options:    translation.OptionsFromConfig(s.Config, opts.Force, opts.MergeOnCollision),
 		Scenes:     opts.Scenes,

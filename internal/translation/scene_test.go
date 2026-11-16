@@ -324,7 +324,7 @@ func TestJob_TranslatesAndSkips(t *testing.T) {
 	j := &Job{
 		Repository: db.Repository(),
 		Translator: &fakeTranslator{},
-		Hooks:      hooks,
+		SceneHooks: hooks,
 		Options:    testOptions,
 		Scenes:     true,
 		SceneIDs:   []int{1, 2},

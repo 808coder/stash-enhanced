@@ -195,58 +195,42 @@ func mergeRelations(ctx context.Context, qb models.TagReaderWriter, res *TagMerg
 		return nil
 	}
 
-	for _, p := range parents {
-		if p == dstID {
-			if err := skip("parent", p, "would be a self-reference"); err != nil {
+	// add adds each id as a relation of the destination unless it is the
+	// destination itself or found by lookup (the destination's descendants
+	// for a parent, its ancestors for a child), which would close a cycle.
+	add := func(label string, ids []int, lookup func(context.Context, int, []int) ([]*models.TagPath, error), set func(*models.TagPartial, *models.UpdateIDs), added *[]int) error {
+		for _, id := range ids {
+			if id == dstID {
+				if err := skip(label, id, "would be a self-reference"); err != nil {
+					return err
+				}
+				continue
+			}
+			related, err := lookup(ctx, dstID, nil)
+			if err != nil {
 				return err
 			}
-			continue
-		}
-		// a descendant of the destination as its parent closes a loop
-		descendants, err := qb.FindAllDescendants(ctx, dstID, nil)
-		if err != nil {
-			return err
-		}
-		if slices.ContainsFunc(descendants, func(t *models.TagPath) bool { return t.ID == p }) {
-			if err := skip("parent", p, "would create a cycle"); err != nil {
-				return err
+			if slices.ContainsFunc(related, func(t *models.TagPath) bool { return t.ID == id }) {
+				if err := skip(label, id, "would create a cycle"); err != nil {
+					return err
+				}
+				continue
 			}
-			continue
-		}
 
-		partial := models.NewTagPartial()
-		partial.ParentIDs = &models.UpdateIDs{IDs: []int{p}, Mode: models.RelationshipUpdateModeAdd}
-		if _, err := qb.UpdatePartial(ctx, dstID, partial); err != nil {
-			return err
+			partial := models.NewTagPartial()
+			set(&partial, &models.UpdateIDs{IDs: []int{id}, Mode: models.RelationshipUpdateModeAdd})
+			if _, err := qb.UpdatePartial(ctx, dstID, partial); err != nil {
+				return err
+			}
+			*added = append(*added, id)
 		}
-		res.AddedParentIDs = append(res.AddedParentIDs, p)
+		return nil
 	}
 
-	for _, c := range children {
-		if c == dstID {
-			if err := skip("child", c, "would be a self-reference"); err != nil {
-				return err
-			}
-			continue
-		}
-		ancestors, err := qb.FindAllAncestors(ctx, dstID, nil)
-		if err != nil {
-			return err
-		}
-		if slices.ContainsFunc(ancestors, func(t *models.TagPath) bool { return t.ID == c }) {
-			if err := skip("child", c, "would create a cycle"); err != nil {
-				return err
-			}
-			continue
-		}
-
-		partial := models.NewTagPartial()
-		partial.ChildIDs = &models.UpdateIDs{IDs: []int{c}, Mode: models.RelationshipUpdateModeAdd}
-		if _, err := qb.UpdatePartial(ctx, dstID, partial); err != nil {
-			return err
-		}
-		res.AddedChildIDs = append(res.AddedChildIDs, c)
+	// a descendant of the destination as its parent closes a loop
+	if err := add("parent", parents, qb.FindAllDescendants, func(p *models.TagPartial, ids *models.UpdateIDs) { p.ParentIDs = ids }, &res.AddedParentIDs); err != nil {
+		return err
 	}
-
-	return nil
+	// an ancestor of the destination as its child closes a loop
+	return add("child", children, qb.FindAllAncestors, func(p *models.TagPartial, ids *models.UpdateIDs) { p.ChildIDs = ids }, &res.AddedChildIDs)
 }

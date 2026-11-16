@@ -21,8 +21,8 @@ import (
 // row, e.g. because the provider is down or the API key is wrong.
 const MaxConsecutiveFailures = 3
 
-// HookExecutor runs Scene.Update.Post plugin hooks.
-type HookExecutor interface {
+// SceneHookExecutor runs Scene.Update.Post plugin hooks.
+type SceneHookExecutor interface {
 	ExecuteSceneUpdatePostHooks(ctx context.Context, input models.SceneUpdateInput, inputFields []string)
 }
 
@@ -53,7 +53,7 @@ func NewTranslator(c *config.Config) (translate.Translator, error) {
 
 // TranslateAndApply translates a scene and saves the result. It returns the
 // translation, which is empty if nothing needed translating.
-func TranslateAndApply(ctx context.Context, r models.Repository, tr translate.Translator, hooks HookExecutor, sceneID int, opts Options, now time.Time) (*SceneTranslation, error) {
+func TranslateAndApply(ctx context.Context, r models.Repository, tr translate.Translator, hooks SceneHookExecutor, sceneID int, opts Options, now time.Time) (*SceneTranslation, error) {
 	t, err := Translate(ctx, r, tr, sceneID, opts)
 	if err != nil {
 		return nil, err
@@ -84,7 +84,7 @@ func TranslateAndApply(ctx context.Context, r models.Repository, tr translate.Tr
 type Job struct {
 	Repository models.Repository
 	Translator translate.Translator
-	Hooks      HookExecutor
+	SceneHooks SceneHookExecutor
 	TagHooks   TagHookExecutor
 	Options    Options
 
@@ -267,7 +267,7 @@ func (j *Job) Execute(ctx context.Context, progress Progress) (*Result, error) {
 
 	for _, id := range sceneIDs {
 		stop, err := run(fmt.Sprintf("Translating scene %d", id), &res.Scenes.Failed, func() error {
-			t, err := TranslateAndApply(ctx, j.Repository, j.Translator, j.Hooks, id, j.Options, now())
+			t, err := TranslateAndApply(ctx, j.Repository, j.Translator, j.SceneHooks, id, j.Options, now())
 			if err != nil {
 				return err
 			}

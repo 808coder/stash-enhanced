@@ -16,7 +16,7 @@ import (
 	"github.com/stashapp/stash/pkg/sliceutil/stringslice"
 )
 
-// sceneHooks adapts the resolver's hook executor to translation.HookExecutor.
+// sceneHooks adapts the resolver's hook executor to translation.SceneHookExecutor.
 type sceneHooks struct {
 	r *mutationResolver
 }
