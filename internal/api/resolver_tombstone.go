@@ -3,8 +3,11 @@ package api
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 	"strconv"
+	"strings"
 
+	"github.com/stashapp/stash/internal/manager/config"
 	"github.com/stashapp/stash/pkg/models"
 	"github.com/stashapp/stash/pkg/scene"
 	"github.com/stashapp/stash/pkg/utils"
@@ -73,6 +76,28 @@ func (r *tombstoneFileResolver) Phash(ctx context.Context, obj *models.Tombstone
 	return &ret, nil
 }
 
+// tombstoneBasenameTerm normalises a Filename search term like a stored
+// Filename stem: it strips a trailing extension if it is one of videoExts
+// (ignoring case), then a trailing resolution token. Other dotted parts are
+// kept, since release names such as "Studio.24.01.01" are full of dots. If
+// nothing is left, as for ".mkv", the term is searched as given.
+func tombstoneBasenameTerm(term string, videoExts []string) string {
+	stem := term
+	if ext := strings.TrimPrefix(filepath.Ext(term), "."); ext != "" {
+		for _, v := range videoExts {
+			if strings.EqualFold(ext, strings.TrimPrefix(v, ".")) {
+				stem = strings.TrimSuffix(term, "."+ext)
+				break
+			}
+		}
+	}
+
+	if ret := models.NormaliseTombstoneStem(stem); ret != "" {
+		return ret
+	}
+	return term
+}
+
 func (r *queryResolver) FindTombstones(ctx context.Context, tombstoneFilter *TombstoneFilterInput, filter *models.FindFilterType) (ret *models.TombstoneQueryResult, err error) {
 	var f *models.TombstoneFilter
 	if tombstoneFilter != nil {
@@ -96,7 +121,7 @@ func (r *queryResolver) FindTombstones(ctx context.Context, tombstoneFilter *Tom
 			f.Title = *tombstoneFilter.Title
 		}
 		if tombstoneFilter.Basename != nil {
-			f.Basename = *tombstoneFilter.Basename
+			f.Basename = tombstoneBasenameTerm(*tombstoneFilter.Basename, config.GetInstance().GetVideoExtensions())
 		}
 		if p := tombstoneFilter.Phash; p != nil {
 			value, err := utils.StringToPhash(p.Value)
@@ -141,7 +166,7 @@ func (r *mutationResolver) TombstoneUpdate(ctx context.Context, input TombstoneU
 
 	reason := ""
 	if input.Reason != nil {
-		reason = *input.Reason
+		reason = strings.TrimSpace(*input.Reason)
 	}
 
 	if err := r.withTxn(ctx, func(ctx context.Context) error {

@@ -162,9 +162,10 @@ type tombstoneFileRow struct {
 	Phash        null.Int    `db:"phash"`
 }
 
-// basenameStem returns the Filename without its extension.
+// basenameStem returns the Filename without its extension and without a
+// trailing resolution token (see models.NormaliseTombstoneStem).
 func basenameStem(basename string) string {
-	return strings.TrimSuffix(basename, filepath.Ext(basename))
+	return models.NormaliseTombstoneStem(strings.TrimSuffix(basename, filepath.Ext(basename)))
 }
 
 func (r *tombstoneFileRow) fromTombstoneFile(o models.TombstoneFile) {
@@ -415,17 +416,18 @@ func tombstoneConditions(f *models.TombstoneFilter) []tombstoneCondition {
 	if f.Code != "" {
 		add(models.TombstoneMatchKeyCode, "t.code = ?", f.Code)
 	}
+	// the text filters fold case with lower_unicode, since LIKE folds ASCII
+	// only
 	if f.Title != "" {
-		p := containsPattern(f.Title)
-		add(models.TombstoneMatchKeyTitle, `(t.title LIKE ? ESCAPE '\' OR t.original_title LIKE ? ESCAPE '\')`, p, p)
+		p := containsPattern(lowerUnicode(f.Title))
+		add(models.TombstoneMatchKeyTitle,
+			`(lower_unicode(t.title) LIKE ? ESCAPE '\' OR lower_unicode(t.original_title) LIKE ? ESCAPE '\')`, p, p)
 	}
 	if f.Basename != "" {
-		// match the term as given and without its extension, so that both
-		// "clip" and "clip.mp4" find "Clip.mkv"
-		p := containsPattern(f.Basename)
-		ps := containsPattern(basenameStem(f.Basename))
+		// the term is searched as given; the API layer normalises it
+		p := containsPattern(lowerUnicode(f.Basename))
 		add(models.TombstoneMatchKeyBasename,
-			tombstoneFileCondition(`(f.basename_stem LIKE ? ESCAPE '\' OR f.basename_stem LIKE ? ESCAPE '\')`), p, ps)
+			tombstoneFileCondition(`lower_unicode(f.basename_stem) LIKE ? ESCAPE '\'`), p)
 	}
 
 	return ret
@@ -442,18 +444,20 @@ func tombstoneFirstFile(col string) string {
 // Tombstone has no value for the key.
 var tombstoneSorts = map[string]string{
 	models.TombstoneSortDeletedAt:  "t.deleted_at",
-	models.TombstoneSortTitle:      "COALESCE(NULLIF(t.title, ''), NULLIF(t.original_title, '')) COLLATE NOCASE",
+	models.TombstoneSortTitle:      "COALESCE(NULLIF(t.title, ''), NULLIF(t.original_title, '')) COLLATE NATURAL_CI",
 	models.TombstoneSortOrigin:     "t.origin",
 	models.TombstoneSortReason:     "NULLIF(t.reason, '') COLLATE NOCASE",
 	models.TombstoneSortSize:       tombstoneFirstFile("size"),
 	models.TombstoneSortResolution: tombstoneFirstFile("height"),
-	models.TombstoneSortBasename:   "NULLIF(" + tombstoneFirstFile("basename") + ", '') COLLATE NOCASE",
+	models.TombstoneSortBasename:   "NULLIF(" + tombstoneFirstFile("basename") + ", '') COLLATE NATURAL_CI",
 	models.TombstoneSortPhash:      tombstoneFirstFile("phash"),
 }
 
 // tombstoneOrderBy returns the ORDER BY clause for findFilter. Without a
 // sort it is newest first. Tombstones without a value for the sort key come
-// last in either direction; ties are broken newest first.
+// last in either direction; ties are broken newest first. The title and
+// Filename sorts use NATURAL_CI, which never reports equal values, so their
+// ties follow the sort direction instead.
 func tombstoneOrderBy(findFilter *models.FindFilterType) (string, error) {
 	const newestFirst = "t.deleted_at DESC, t.id DESC"
 

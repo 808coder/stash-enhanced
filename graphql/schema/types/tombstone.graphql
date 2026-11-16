@@ -116,7 +116,12 @@ input TombstoneFilterInput {
   phash: TombstonePhashFilterInput
   "Case-insensitive substring of title or original title"
   title: String
-  "Case-insensitive substring of the Filename without extension"
+  """
+  Case-insensitive substring of the Filename. Extension and a trailing
+  resolution (e.g. .1080p, .4k) are ignored on both sides, so a release finds
+  the same release in another quality. Only a configured video extension is
+  stripped from the term; other dotted parts are searched as given.
+  """
   basename: String
 }
 

@@ -3,6 +3,7 @@ package models
 import (
 	"fmt"
 	"io"
+	"regexp"
 	"strconv"
 	"time"
 )
@@ -216,9 +217,26 @@ type TombstoneFilter struct {
 	Phash *TombstonePhashInput
 	// Case-insensitive substring of the title or the original title.
 	Title string
-	// Case-insensitive substring of a file Filename without extension. An
-	// extension in the search term is ignored.
+	// Case-insensitive substring of a file Filename stem (see
+	// NormaliseTombstoneStem). The term is searched as given; the API layer
+	// strips video extensions and resolution tokens from it beforehand.
 	Basename string
+}
+
+// tombstoneResolutionToken matches a trailing resolution token of a release
+// name, such as ".1080p", ".720P" or ".4k".
+var tombstoneResolutionToken = regexp.MustCompile(`(?i)\.(\d{3,4}p|4k)$`)
+
+// NormaliseTombstoneStem strips a trailing resolution token (".<3-4
+// digits>p" or ".4k", case-insensitive) from a Filename stem, so that the
+// same release in another quality matches. It is applied to stored stems
+// and to search terms alike. A stem that consists of the token only is
+// returned unchanged.
+func NormaliseTombstoneStem(stem string) string {
+	if ret := tombstoneResolutionToken.ReplaceAllString(stem, ""); ret != "" {
+		return ret
+	}
+	return stem
 }
 
 // IsEmpty reports whether the filter has no keys. Origin is not a key.

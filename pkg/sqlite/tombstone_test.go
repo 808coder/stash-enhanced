@@ -5,6 +5,7 @@ package sqlite_test
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"testing"
 	"time"
@@ -277,8 +278,10 @@ func TestTombstoneStore_QuerySingleKey(t *testing.T) {
 			{"title wildcards are literal", models.TombstoneFilter{Title: "%"}, []tombstoneHit{}},
 			{"filename substring ignores case", models.TombstoneFilter{Basename: "holiday.clip"},
 				[]tombstoneHit{{fx.a.ID, keys(models.TombstoneMatchKeyBasename)}}},
-			{"filename ignores search extension", models.TombstoneFilter{Basename: "other_name.avi"},
+			{"filename ignores stored extension", models.TombstoneFilter{Basename: "other_name"},
 				[]tombstoneHit{{fx.b.ID, keys(models.TombstoneMatchKeyBasename)}}},
+			// the API layer strips video extensions from the term
+			{"filename term is searched as given", models.TombstoneFilter{Basename: "other_name.avi"}, []tombstoneHit{}},
 			{"filename does not match extension", models.TombstoneFilter{Basename: "mkv"}, []tombstoneHit{}},
 			{"phash exact", models.TombstoneFilter{Phash: &models.TombstonePhashInput{Value: fixturePhashA, Distance: 0}},
 				[]tombstoneHit{{fx.a.ID, keys(models.TombstoneMatchKeyPhash)}}},
@@ -296,6 +299,90 @@ func TestTombstoneStore_QuerySingleKey(t *testing.T) {
 				assert.Equal(t, tt.want, got)
 				assert.Equal(t, len(tt.want), count)
 			})
+		}
+	})
+}
+
+func TestTombstoneStore_QueryFilename(t *testing.T) {
+	runWithRollbackTxn(t, "filename", func(t *testing.T, ctx context.Context) {
+		withFile := func(basename string) *models.Tombstone {
+			return createTombstone(t, ctx, &models.Tombstone{
+				Origin: models.TombstoneOriginManual,
+				Files:  []*models.TombstoneFile{{Basename: basename}},
+			})
+		}
+
+		release1080 := withFile("BangVan.26.10.20.Kathy.Deep.XXX.1080p.mp4")
+		release720 := withFile("BangVan.26.10.20.Kathy.Deep.XXX.720p.mkv")
+		releasePlain := withFile("BangVan.26.10.20.Kathy.Deep.XXX.mp4")
+		releaseHEVC := withFile("BangVan.26.10.20.Kathy.Deep.XXX.1080p.HEVC.mp4")
+		withFile("BangVan.26.10.20.Kathy.Smith.XXX.1080p.mp4")
+		clip := withFile("Clip.mkv")
+		withFile("Mr.mp4")
+		withFile("Studio.24.01.15.mp4")
+		umlaut := withFile("Über.Movie.mp4")
+
+		ids := func(ts ...*models.Tombstone) []int {
+			ret := []int{}
+			for _, t := range ts {
+				ret = append(ret, t.ID)
+			}
+			return ret
+		}
+
+		tests := []struct {
+			name string
+			term string
+			want []int
+		}{
+			// the API layer normalises "….1080p" to "…XXX" like a stored stem.
+			// The HEVC release matches too: the term is a substring of its
+			// stem "….1080p.HEVC".
+			{"release in any quality", models.NormaliseTombstoneStem("BangVan.26.10.20.Kathy.Deep.XXX.1080p"),
+				ids(releaseHEVC, releasePlain, release720, release1080)},
+			// "clip.mp4" reaches the store as "clip"
+			{"stem finds other extension", "clip", ids(clip)},
+			// ".mkv" reaches the store as given; stems carry no extension
+			{"extension only matches nothing", ".mkv", ids()},
+			{"name with a dot is not cut", "Mr. Smith", ids()},
+			{"dated release is not cut", "Studio.24.01.01", ids()},
+			{"dotted term without extension", "Kathy.Deep", ids(releaseHEVC, releasePlain, release720, release1080)},
+			{"unicode case is folded", "über", ids(umlaut)},
+			{"unicode upper-case term", "ÜBER.MOVIE", ids(umlaut)},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				res, err := db.Tombstone.Query(ctx, &models.TombstoneFilter{Basename: tt.term}, nil)
+				require.NoError(t, err)
+				got := []int{}
+				for _, m := range res.Matches {
+					got = append(got, m.Tombstone.ID)
+					assert.Equal(t, keys(models.TombstoneMatchKeyBasename), m.MatchedKeys)
+				}
+				assert.Equal(t, tt.want, got)
+			})
+		}
+	})
+}
+
+func TestTombstoneStore_QueryTitleUnicode(t *testing.T) {
+	runWithRollbackTxn(t, "title folds unicode case", func(t *testing.T, ctx context.Context) {
+		title := createTombstone(t, ctx, &models.Tombstone{Origin: models.TombstoneOriginManual, Title: "Über alles"})
+		original := createTombstone(t, ctx, &models.Tombstone{Origin: models.TombstoneOriginManual, Title: "Translated", OriginalTitle: "ÄRGER"})
+		createTombstone(t, ctx, &models.Tombstone{Origin: models.TombstoneOriginManual})
+
+		for _, tt := range []struct {
+			term string
+			want int
+		}{
+			{"über", title.ID},
+			{"ÜBER ALLES", title.ID},
+			{"ärger", original.ID},
+		} {
+			got, count := queryHits(t, ctx, &models.TombstoneFilter{Title: tt.term}, nil)
+			assert.Equal(t, []tombstoneHit{{tt.want, keys(models.TombstoneMatchKeyTitle)}}, got, tt.term)
+			assert.Equal(t, 1, count, tt.term)
 		}
 	})
 }
@@ -474,6 +561,63 @@ func TestTombstoneStore_QuerySort(t *testing.T) {
 			_, err := db.Tombstone.Query(ctx, nil, &models.FindFilterType{Sort: &sort})
 			assert.Error(t, err)
 		})
+	})
+
+	runWithRollbackTxn(t, "text sorts are natural", func(t *testing.T, ctx context.Context) {
+		create := func(n int) *models.Tombstone {
+			name := fmt.Sprintf("Scene %d", n)
+			return createTombstone(t, ctx, &models.Tombstone{
+				DeletedAt: time.Date(2026, 1, n, 0, 0, 0, 0, time.UTC),
+				Origin:    models.TombstoneOriginManual,
+				Title:     name,
+				Reason:    name,
+				Files:     []*models.TombstoneFile{{Basename: name + ".mp4"}},
+			})
+		}
+		s10, s2, s1 := create(10), create(2), create(1)
+
+		for _, sort := range []string{models.TombstoneSortTitle, models.TombstoneSortBasename} {
+			t.Run(sort, func(t *testing.T) {
+				sort, dir := sort, models.SortDirectionEnumAsc
+				res, err := db.Tombstone.Query(ctx, nil, &models.FindFilterType{Sort: &sort, Direction: &dir})
+				require.NoError(t, err)
+				got := []int{}
+				for _, m := range res.Matches {
+					got = append(got, m.Tombstone.ID)
+				}
+				assert.Equal(t, []int{s1.ID, s2.ID, s10.ID}, got)
+			})
+		}
+	})
+	runWithRollbackTxn(t, "reason ties newest first", func(t *testing.T, ctx context.Context) {
+		create := func(day int, reason string) *models.Tombstone {
+			return createTombstone(t, ctx, &models.Tombstone{
+				DeletedAt: time.Date(2026, 1, day, 0, 0, 0, 0, time.UTC),
+				Origin:    models.TombstoneOriginManual,
+				Reason:    reason,
+			})
+		}
+		oldest, middle, newest := create(1, "Duplicate"), create(2, "duplicate"), create(3, "DUPLICATE")
+		broken := create(4, "Broken")
+
+		for _, tt := range []struct {
+			dir  models.SortDirectionEnum
+			want []int
+		}{
+			{models.SortDirectionEnumAsc, []int{broken.ID, newest.ID, middle.ID, oldest.ID}},
+			{models.SortDirectionEnumDesc, []int{newest.ID, middle.ID, oldest.ID, broken.ID}},
+		} {
+			t.Run(tt.dir.String(), func(t *testing.T) {
+				sort, dir := models.TombstoneSortReason, tt.dir
+				res, err := db.Tombstone.Query(ctx, nil, &models.FindFilterType{Sort: &sort, Direction: &dir})
+				require.NoError(t, err)
+				got := []int{}
+				for _, m := range res.Matches {
+					got = append(got, m.Tombstone.ID)
+				}
+				assert.Equal(t, tt.want, got)
+			})
+		}
 	})
 }
 
