@@ -34,6 +34,7 @@ func (h *ScanHandler) applyTombstones(ctx context.Context, newScene *models.Scen
 			if err := opts.Store.Destroy(ctx, t.ID); err != nil {
 				return fmt.Errorf("removing tombstone %d: %w", t.ID, err)
 			}
+			logger.Infof("Removed clean tombstone %d: %s was scanned again", t.ID, f.Base().Path)
 		}
 	}
 

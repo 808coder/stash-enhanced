@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/stashapp/stash/pkg/logger"
 	"github.com/stashapp/stash/pkg/models"
 )
 
@@ -51,7 +52,12 @@ func (s *Service) recordTombstone(ctx context.Context, scene *models.Scene, opts
 	t.Reason = opts.Reason
 	t.Files = append(removedTombstoneFiles(opts.RemovedFiles, scene), t.Files...)
 
-	return s.Tombstone.Create(ctx, t)
+	if err := s.Tombstone.Create(ctx, t); err != nil {
+		return err
+	}
+
+	logger.Infof("Recorded tombstone for scene %q (%s, %d file(s))", scene.DisplayName(), t.Origin, len(t.Files))
+	return nil
 }
 
 func (s *Service) snapshot(ctx context.Context, scene *models.Scene) (*models.Tombstone, error) {
