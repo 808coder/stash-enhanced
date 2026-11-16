@@ -148,7 +148,7 @@ func (s *Service) snapshotStudio(ctx context.Context, studioID *int) (*models.To
 	}, nil
 }
 
-func (s *Service) snapshotPerformers(ctx context.Context, ids []int) ([]models.TombstoneEntity, error) {
+func (s *Service) snapshotPerformers(ctx context.Context, ids []int) ([]models.TombstonePerformer, error) {
 	if len(ids) == 0 {
 		return nil, nil
 	}
@@ -158,7 +158,7 @@ func (s *Service) snapshotPerformers(ctx context.Context, ids []int) ([]models.T
 		return nil, fmt.Errorf("finding performers: %w", err)
 	}
 
-	var ret []models.TombstoneEntity
+	var ret []models.TombstonePerformer
 	for _, p := range performers {
 		if p == nil {
 			continue
@@ -166,8 +166,10 @@ func (s *Service) snapshotPerformers(ctx context.Context, ids []int) ([]models.T
 		if err := p.LoadStashIDs(ctx, s.Performer); err != nil {
 			return nil, fmt.Errorf("loading performer stash ids: %w", err)
 		}
-		ret = append(ret, models.TombstoneEntity{
+		ret = append(ret, models.TombstonePerformer{
+			ID:       p.ID,
 			Name:     p.Name,
+			Gender:   p.Gender,
 			StashIDs: toTombstoneStashIDs(p.StashIDs.List()),
 		})
 	}

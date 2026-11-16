@@ -1,13 +1,16 @@
 import React, { useState } from "react";
 import { Badge, Button, ButtonGroup, Card, Form } from "react-bootstrap";
 import { FormattedMessage, useIntl } from "react-intl";
+import { Link } from "react-router-dom";
 import { faPencilAlt, faTrash } from "@fortawesome/free-solid-svg-icons";
 import * as GQL from "src/core/generated-graphql";
 import { useToast } from "src/hooks/Toast";
 import { useDebouncedState } from "src/hooks/debounce";
 import TextUtils from "src/utils/text";
+import { getStashboxBase } from "src/utils/stashbox";
 import { ClearableInput } from "../Shared/ClearableInput";
 import { ErrorMessage } from "../Shared/ErrorMessage";
+import { ExternalLink } from "../Shared/ExternalLink";
 import { FileSize } from "../Shared/FileSize";
 import { Icon } from "../Shared/Icon";
 import { LoadingIndicator } from "../Shared/LoadingIndicator";
@@ -48,6 +51,93 @@ const matchKeyMessageIDs: Record<GQL.TombstoneMatchKey, string> = {
 };
 
 type TombstoneData = GQL.TombstoneDataFragment;
+type TombstonePerformer = TombstoneData["performers"][number];
+
+// The frozen gender, else the gender of the matching library performer.
+// Unknown gender counts as non-male.
+function isMale(p: TombstonePerformer) {
+  return (p.gender ?? p.performer?.gender) === GQL.GenderEnum.Male;
+}
+
+// Non-male performers first, keeping the recorded order within each group.
+function visiblePerformers(
+  performers: TombstonePerformer[],
+  hideMale: boolean
+) {
+  const nonMale = performers.filter((p) => !isMale(p));
+  if (hideMale) return nonMale;
+  return nonMale.concat(performers.filter(isMale));
+}
+
+// Links to the library performer if it still exists, else to its stash-box
+// page, else plain text.
+const TombstonePerformerLink: React.FC<{ performer: TombstonePerformer }> = ({
+  performer,
+}) => {
+  if (performer.performer) {
+    return (
+      <Link to={`/performers/${performer.performer.id}`}>{performer.name}</Link>
+    );
+  }
+
+  for (const id of performer.stash_ids) {
+    const base = getStashboxBase(id.endpoint);
+    if (base) {
+      return (
+        <ExternalLink href={`${base}performers/${id.stash_id}`}>
+          {performer.name}
+        </ExternalLink>
+      );
+    }
+  }
+
+  return <>{performer.name}</>;
+};
+
+const TombstonePerformers: React.FC<{
+  performers: TombstonePerformer[];
+  hideMale: boolean;
+}> = ({ performers, hideMale }) => {
+  const visible = visiblePerformers(performers, hideMale);
+  if (visible.length === 0) return null;
+
+  return (
+    <div className="mt-2 tombstone-performers">
+      <strong>
+        <FormattedMessage id="performers" />:{" "}
+      </strong>
+      {visible.map((p, i) => (
+        <React.Fragment key={i}>
+          {i > 0 && ", "}
+          <TombstonePerformerLink performer={p} />
+        </React.Fragment>
+      ))}
+    </div>
+  );
+};
+
+const TombstoneTags: React.FC<{ tags: TombstoneData["tag_items"] }> = ({
+  tags,
+}) => {
+  if (tags.length === 0) return null;
+
+  return (
+    <div className="mt-2 tombstone-tags">
+      <strong>
+        <FormattedMessage id="tags" />:{" "}
+      </strong>
+      {tags.map((t) => (
+        <Badge
+          key={t.name}
+          variant="secondary"
+          className={t.tag ? "tag-item tag-link" : "tag-item"}
+        >
+          {t.tag ? <Link to={`/tags/${t.tag.id}`}>{t.name}</Link> : t.name}
+        </Badge>
+      ))}
+    </div>
+  );
+};
 
 const EditReasonDialog: React.FC<{
   tombstone: TombstoneData;
@@ -152,9 +242,10 @@ const DeleteTombstoneDialog: React.FC<{
 const TombstoneCard: React.FC<{
   tombstone: TombstoneData;
   matchedKeys: GQL.TombstoneMatchKey[];
+  hideMale: boolean;
   onEdit: () => void;
   onDelete: () => void;
-}> = ({ tombstone, matchedKeys, onEdit, onDelete }) => {
+}> = ({ tombstone, matchedKeys, hideMale, onEdit, onDelete }) => {
   const intl = useIntl();
   const title = tombstone.title || tombstone.original_title;
 
@@ -213,6 +304,12 @@ const TombstoneCard: React.FC<{
             ))}
           </div>
         )}
+
+        <TombstonePerformers
+          performers={tombstone.performers}
+          hideMale={hideMale}
+        />
+        <TombstoneTags tags={tombstone.tag_items} />
 
         <div className="mt-2 tombstone-reason">
           <strong>
@@ -273,6 +370,8 @@ export const Tombstones: React.FC = () => {
   );
   const [editing, setEditing] = useState<TombstoneData>();
   const [deleting, setDeleting] = useState<TombstoneData>();
+  // not persisted, like the detail panel toggle (#37)
+  const [hideMale, setHideMale] = useState(false);
 
   const { data, loading, error, refetch } = GQL.useFindTombstonesQuery({
     fetchPolicy: "no-cache",
@@ -294,6 +393,14 @@ export const Tombstones: React.FC = () => {
           <h6 className="mr-auto align-self-center">
             <FormattedMessage id="tombstones.found" values={{ count }} />
           </h6>
+          <Form.Check
+            type="switch"
+            id="tombstones-hide-male"
+            className="align-self-center mr-3"
+            checked={hideMale}
+            onChange={() => setHideMale(!hideMale)}
+            label={<FormattedMessage id="hide_male_performers" />}
+          />
           <Pagination
             itemsPerPage={PAGE_SIZE}
             currentPage={page}
@@ -313,6 +420,7 @@ export const Tombstones: React.FC = () => {
             key={m.tombstone.id}
             tombstone={m.tombstone}
             matchedKeys={m.matched_keys}
+            hideMale={hideMale}
             onEdit={() => setEditing(m.tombstone)}
             onDelete={() => setDeleting(m.tombstone)}
           />

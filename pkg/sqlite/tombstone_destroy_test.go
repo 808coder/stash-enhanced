@@ -27,6 +27,7 @@ func (tombstoneDestroyConfig) GetTombstonesRecord() bool { return true }
 func TestTombstone_SceneDestroySnapshotIsFrozen(t *testing.T) {
 	runWithRollbackTxn(t, "destroy then delete related", func(t *testing.T, ctx context.Context) {
 		const stashdb = "https://stashdb.org/graphql"
+		female := models.GenderEnumFemale
 
 		studio := &models.CreateStudioInput{Studio: &models.Studio{
 			Name:     "Frozen destroy studio",
@@ -35,6 +36,7 @@ func TestTombstone_SceneDestroySnapshotIsFrozen(t *testing.T) {
 		require.NoError(t, db.Studio.Create(ctx, studio))
 		performer := &models.CreatePerformerInput{Performer: &models.Performer{
 			Name:     "Frozen destroy performer",
+			Gender:   &female,
 			StashIDs: models.NewRelatedStashIDs([]models.StashID{{Endpoint: stashdb, StashID: "performer-uuid"}}),
 		}}
 		require.NoError(t, db.Performer.Create(ctx, performer))
@@ -80,8 +82,10 @@ func TestTombstone_SceneDestroySnapshotIsFrozen(t *testing.T) {
 			Name:     "Frozen destroy studio",
 			StashIDs: []models.TombstoneStashID{{Endpoint: stashdb, StashID: "studio-uuid"}},
 		}, before.Studio)
-		assert.Equal(t, []models.TombstoneEntity{{
+		assert.Equal(t, []models.TombstonePerformer{{
+			ID:       performer.ID,
 			Name:     "Frozen destroy performer",
+			Gender:   &female,
 			StashIDs: []models.TombstoneStashID{{Endpoint: stashdb, StashID: "performer-uuid"}},
 		}}, before.Performers)
 		assert.Equal(t, []string{"Frozen destroy tag"}, before.Tags)

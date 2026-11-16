@@ -20,8 +20,22 @@ fragment TombstoneData on Tombstone {
   }
   performers {
     name
+    gender
+    stash_ids {
+      endpoint
+      stash_id
+    }
+    performer {
+      id
+      gender
+    }
   }
-  tags
+  tag_items {
+    name
+    tag {
+      id
+    }
+  }
   files {
     id
     basename

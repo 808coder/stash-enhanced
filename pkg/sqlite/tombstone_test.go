@@ -41,8 +41,8 @@ func fullTombstone() *models.Tombstone {
 			Name:     "Studio name",
 			StashIDs: []models.TombstoneStashID{{Endpoint: "https://stashdb.org/graphql", StashID: "studio-uuid"}},
 		},
-		Performers: []models.TombstoneEntity{
-			{Name: "Performer A", StashIDs: []models.TombstoneStashID{{Endpoint: "https://stashdb.org/graphql", StashID: "perf-a"}}},
+		Performers: []models.TombstonePerformer{
+			{ID: 12, Name: "Performer A", Gender: ptr(models.GenderEnumFemale), StashIDs: []models.TombstoneStashID{{Endpoint: "https://stashdb.org/graphql", StashID: "perf-a"}}},
 			{Name: "Performer B", StashIDs: []models.TombstoneStashID{}},
 		},
 		Tags: []string{"Tag A", "Tag B"},
@@ -130,7 +130,7 @@ func TestTombstoneStore_FrozenAfterRelatedDeleted(t *testing.T) {
 		ts := createTombstone(t, ctx, &models.Tombstone{
 			Origin:     models.TombstoneOriginManual,
 			Studio:     &models.TombstoneEntity{Name: studio.Name},
-			Performers: []models.TombstoneEntity{{Name: performer.Name}},
+			Performers: []models.TombstonePerformer{{ID: performer.ID, Name: performer.Name}},
 			Tags:       []string{tag.Name},
 		})
 

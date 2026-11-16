@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/stashapp/stash/pkg/models"
+	"github.com/stashapp/stash/pkg/scene"
 	"github.com/stashapp/stash/pkg/utils"
 )
 
@@ -17,8 +18,13 @@ func (r *Resolver) TombstoneFile() TombstoneFileResolver {
 	return &tombstoneFileResolver{r}
 }
 
+func (r *Resolver) TombstonePerformer() TombstonePerformerResolver {
+	return &tombstonePerformerResolver{r}
+}
+
 type tombstoneResolver struct{ *Resolver }
 type tombstoneFileResolver struct{ *Resolver }
+type tombstonePerformerResolver struct{ *Resolver }
 
 func (r *tombstoneResolver) Date(ctx context.Context, obj *models.Tombstone) (*string, error) {
 	if obj.Date == nil {
@@ -30,6 +36,33 @@ func (r *tombstoneResolver) Date(ctx context.Context, obj *models.Tombstone) (*s
 
 func (r *tombstoneResolver) Rating100(ctx context.Context, obj *models.Tombstone) (*int, error) {
 	return obj.Rating, nil
+}
+
+func (r *tombstoneResolver) TagItems(ctx context.Context, obj *models.Tombstone) ([]*TombstoneTag, error) {
+	ret := make([]*TombstoneTag, len(obj.Tags))
+	if err := r.withReadTxn(ctx, func(ctx context.Context) error {
+		for i, name := range obj.Tags {
+			tag, err := scene.FindTombstoneTag(ctx, r.repository.Tag, name)
+			if err != nil {
+				return err
+			}
+			ret[i] = &TombstoneTag{Name: name, Tag: tag}
+		}
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+	return ret, nil
+}
+
+func (r *tombstonePerformerResolver) Performer(ctx context.Context, obj *models.TombstonePerformer) (ret *models.Performer, err error) {
+	if err := r.withReadTxn(ctx, func(ctx context.Context) error {
+		ret, err = scene.FindTombstonePerformer(ctx, r.repository.Performer, *obj)
+		return err
+	}); err != nil {
+		return nil, err
+	}
+	return ret, nil
 }
 
 func (r *tombstoneFileResolver) Phash(ctx context.Context, obj *models.TombstoneFile) (*string, error) {

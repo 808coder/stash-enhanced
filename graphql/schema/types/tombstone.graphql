@@ -25,10 +25,27 @@ type TombstoneStashID {
   stash_id: String!
 }
 
-"A studio or performer frozen into a Tombstone"
+"A studio frozen into a Tombstone"
 type TombstoneEntity {
   name: String!
   stash_ids: [TombstoneStashID!]!
+}
+
+"A performer frozen into a Tombstone"
+type TombstonePerformer {
+  name: String!
+  "Null for Tombstones recorded before gender was stored"
+  gender: GenderEnum
+  stash_ids: [TombstoneStashID!]!
+  "The library performer this still corresponds to, matched by stash ID, former id with the same name, or a unique name. Null when there is none."
+  performer: Performer
+}
+
+"A tag frozen into a Tombstone"
+type TombstoneTag {
+  name: String!
+  "The library tag with this name, ignoring case. Null when there is none."
+  tag: Tag
 }
 
 type TombstoneFile {
@@ -68,9 +85,11 @@ type Tombstone {
   play_count: Int!
   scene_created_at: Time!
   studio: TombstoneEntity
-  performers: [TombstoneEntity!]!
+  performers: [TombstonePerformer!]!
   "Tag names"
   tags: [String!]!
+  "Tag names with the library tags they still correspond to"
+  tag_items: [TombstoneTag!]!
   files: [TombstoneFile!]!
 }
 

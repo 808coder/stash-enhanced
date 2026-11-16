@@ -34,6 +34,8 @@ const (
 var (
 	destroySceneCreatedAt = time.Date(2024, 3, 4, 5, 6, 7, 0, time.UTC)
 	destroyPhash          = int64(-1234567890123)
+	// a variable so tests can take its address
+	destroyPerformerGender = models.GenderEnumFemale
 )
 
 func newDestroyService(db *mocks.Database, record bool) *Service {
@@ -121,7 +123,7 @@ func expectSnapshotReads(db *mocks.Database) {
 		{Endpoint: "https://stashdb.org", StashID: "studio-stash-id", UpdatedAt: time.Now()},
 	}, nil).Once()
 
-	db.Performer.On("FindMany", testCtx, []int{destroyPerformerID}).Return([]*models.Performer{{ID: destroyPerformerID, Name: "Performer A"}}, nil).Once()
+	db.Performer.On("FindMany", testCtx, []int{destroyPerformerID}).Return([]*models.Performer{{ID: destroyPerformerID, Name: "Performer A", Gender: &destroyPerformerGender}}, nil).Once()
 	db.Performer.On("GetStashIDs", testCtx, destroyPerformerID).Return([]models.StashID{
 		{Endpoint: "https://stashdb.org", StashID: "performer-stash-id"},
 	}, nil).Once()
@@ -155,8 +157,10 @@ func expectedTombstone(origin models.TombstoneOrigin, reason string) *models.Tom
 			Name:     "Studio A",
 			StashIDs: []models.TombstoneStashID{{Endpoint: stashdb, StashID: "studio-stash-id"}},
 		},
-		Performers: []models.TombstoneEntity{{
+		Performers: []models.TombstonePerformer{{
+			ID:       destroyPerformerID,
 			Name:     "Performer A",
+			Gender:   &destroyPerformerGender,
 			StashIDs: []models.TombstoneStashID{{Endpoint: stashdb, StashID: "performer-stash-id"}},
 		}},
 		Tags: []string{"Tag A"},

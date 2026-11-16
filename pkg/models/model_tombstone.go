@@ -123,6 +123,17 @@ type TombstoneEntity struct {
 	StashIDs []TombstoneStashID `json:"stash_ids"`
 }
 
+// TombstonePerformer is a frozen performer. Rows stored before gender and
+// the former id were recorded decode with ID 0 and a nil Gender.
+type TombstonePerformer struct {
+	// ID is the id the performer had when the Tombstone was recorded. The
+	// performer may since have been deleted and the id reused.
+	ID       int                `json:"id,omitempty"`
+	Name     string             `json:"name"`
+	Gender   *GenderEnum        `json:"gender,omitempty"`
+	StashIDs []TombstoneStashID `json:"stash_ids"`
+}
+
 // Tombstone is the record left behind for one deleted scene: a frozen
 // snapshot of its identifying and descriptive data plus its files.
 // Everything except Reason is immutable once stored.
@@ -150,9 +161,9 @@ type Tombstone struct {
 	// SceneCreatedAt is when the scene was added to the library.
 	SceneCreatedAt time.Time `json:"scene_created_at"`
 
-	Studio     *TombstoneEntity  `json:"studio"`
-	Performers []TombstoneEntity `json:"performers"`
-	Tags       []string          `json:"tags"`
+	Studio     *TombstoneEntity     `json:"studio"`
+	Performers []TombstonePerformer `json:"performers"`
+	Tags       []string             `json:"tags"`
 
 	Files []*TombstoneFile `json:"files"`
 }
