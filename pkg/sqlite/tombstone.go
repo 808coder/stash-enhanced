@@ -465,42 +465,19 @@ func (qb *TombstoneStore) Query(ctx context.Context, filter *models.TombstoneFil
 	}
 
 	query := "SELECT " + strings.Join(cols, ", ") + from + " ORDER BY t.deleted_at DESC, t.id DESC"
-	args := append(selectArgs, whereArgs...)
+	args := make([]interface{}, 0, len(selectArgs)+len(whereArgs)+2)
+	args = append(args, selectArgs...)
+	args = append(args, whereArgs...)
 	if !findFilter.IsGetAll() {
 		query += " LIMIT ? OFFSET ?"
 		pageSize := findFilter.GetPageSize()
 		args = append(args, pageSize, (findFilter.GetPage()-1)*pageSize)
 	}
 
-	var ids []int
-	matchedKeys := make(map[int][]models.TombstoneMatchKey)
-	rows, err := dbWrapper.Queryx(ctx, query, args...)
+	ids, matchedKeys, err := queryTombstoneMatches(ctx, query, args, conds)
 	if err != nil {
-		return nil, fmt.Errorf("querying tombstones: %w", err)
+		return nil, err
 	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var id int
-		flags := make([]bool, len(conds))
-		dest := []interface{}{&id}
-		for i := range flags {
-			dest = append(dest, &flags[i])
-		}
-		if err := rows.Scan(dest...); err != nil {
-			return nil, fmt.Errorf("scanning tombstone match: %w", err)
-		}
-		ids = append(ids, id)
-		for i, matched := range flags {
-			if matched {
-				matchedKeys[id] = append(matchedKeys[id], conds[i].key)
-			}
-		}
-	}
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("querying tombstones: %w", err)
-	}
-	rows.Close()
 
 	tombstones, err := qb.findMany(ctx, ids)
 	if err != nil {
@@ -516,4 +493,40 @@ func (qb *TombstoneStore) Query(ctx context.Context, filter *models.TombstoneFil
 	}
 
 	return ret, nil
+}
+
+// queryTombstoneMatches runs the match query and returns the tombstone ids in
+// result order plus the keys each one matched on. The rows are closed before
+// it returns, so the caller can run further queries.
+func queryTombstoneMatches(ctx context.Context, query string, args []interface{}, conds []tombstoneCondition) ([]int, map[int][]models.TombstoneMatchKey, error) {
+	rows, err := dbWrapper.Queryx(ctx, query, args...)
+	if err != nil {
+		return nil, nil, fmt.Errorf("querying tombstones: %w", err)
+	}
+	defer rows.Close()
+
+	var ids []int
+	matchedKeys := make(map[int][]models.TombstoneMatchKey)
+	for rows.Next() {
+		var id int
+		flags := make([]bool, len(conds))
+		dest := []interface{}{&id}
+		for i := range flags {
+			dest = append(dest, &flags[i])
+		}
+		if err := rows.Scan(dest...); err != nil {
+			return nil, nil, fmt.Errorf("scanning tombstone match: %w", err)
+		}
+		ids = append(ids, id)
+		for i, matched := range flags {
+			if matched {
+				matchedKeys[id] = append(matchedKeys[id], conds[i].key)
+			}
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return nil, nil, fmt.Errorf("querying tombstones: %w", err)
+	}
+
+	return ids, matchedKeys, nil
 }
