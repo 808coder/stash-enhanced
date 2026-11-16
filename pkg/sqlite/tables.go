@@ -433,3 +433,15 @@ var (
 		idColumn: goqu.T(savedFilterTable).Col(idColumn),
 	}
 )
+
+var (
+	tombstoneTableMgr = &table{
+		table:    goqu.T(tombstoneTable),
+		idColumn: goqu.T(tombstoneTable).Col(idColumn),
+	}
+
+	tombstoneFileTableMgr = &table{
+		table:    goqu.T(tombstoneFileTable),
+		idColumn: goqu.T(tombstoneFileTable).Col(idColumn),
+	}
+)

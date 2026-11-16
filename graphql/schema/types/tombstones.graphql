@@ -1,0 +1,47 @@
+# Scene tombstone settings. Kept in its own file (using extend) to limit merge
+# conflicts with upstream.
+
+"Badge colour of a deletion reason, from a fixed palette"
+enum TombstoneReasonColor {
+  NEUTRAL
+  BLUE
+  TEAL
+  GREEN
+  YELLOW
+  RED
+}
+
+type TombstoneReason {
+  name: String!
+  color: TombstoneReasonColor!
+}
+
+input TombstoneReasonInput {
+  name: String!
+  color: TombstoneReasonColor!
+}
+
+type ConfigTombstonesResult {
+  "If true, a tombstone is recorded when a scene is deleted. Defaults to true"
+  record: Boolean!
+  "Tag added to rescanned scenes that were deleted manually. Null means a tag named 'Previously deleted' is used"
+  previouslyDeletedTagId: ID
+  "Selectable deletion reasons with their badge colours, in display order. Defaults are used when none are configured"
+  reasons: [TombstoneReason!]!
+}
+
+input ConfigTombstonesInput {
+  record: Boolean
+  "Null leaves the setting unchanged; an empty string clears it"
+  previouslyDeletedTagId: ID
+  "Null leaves the list unchanged. Names are trimmed, entries with an empty name and case-insensitive duplicate names are dropped; at least one reason must remain"
+  reasons: [TombstoneReasonInput!]
+}
+
+extend type ConfigResult {
+  tombstones: ConfigTombstonesResult!
+}
+
+extend type Mutation {
+  configureTombstones(input: ConfigTombstonesInput!): ConfigTombstonesResult!
+}

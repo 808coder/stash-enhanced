@@ -1,0 +1,15 @@
+mutation ConfigureTombstones($input: ConfigTombstonesInput!) {
+  configureTombstones(input: $input) {
+    ...ConfigTombstonesData
+  }
+}
+
+mutation TombstoneDestroy($id: ID!) {
+  tombstoneDestroy(id: $id)
+}
+
+mutation TombstoneUpdate($input: TombstoneUpdateInput!) {
+  tombstoneUpdate(input: $input) {
+    ...TombstoneData
+  }
+}

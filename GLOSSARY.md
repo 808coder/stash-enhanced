@@ -28,3 +28,16 @@ _Avoid_: source title, untranslated title
 A tag's translation matches the name or alias of another tag, case-insensitively. With **Merge on collision** the tag is merged into the other tag; otherwise it is skipped.
 _Avoid_: duplicate tag, conflict
 
+## Tombstones
+
+**Tombstone**
+The record left behind for one scene that was deleted together with its file, by the user ("delete file") or by the Clean task. A frozen snapshot of the scene's identifying and descriptive data; the related studio, performers and tags are kept by name; studio and performers also keep their stash IDs, and performers their former id and gender. Only its reason can be edited. Stored in `fork_tombstones`, see `docs/adr/0002-fork-schema-outside-upstream-migrations.md`.
+_Avoid_: deleted scene, history entry, blacklist
+
+**Tombstone file**
+One of the files listed under a Tombstone: its Filename, Path, quality data and fingerprints (oshash, md5, phash). Stored in `fork_tombstone_files`.
+_Avoid_: deleted file
+
+**Origin**
+Why a Tombstone exists: `MANUAL` (the user deleted the scene with its file) or `CLEAN` (the Clean task removed the scene because all of its files were gone from disk). Stored and exposed in GraphQL as these enum values.
+_Avoid_: source, type

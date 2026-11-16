@@ -469,6 +469,25 @@ func (r *mutationResolver) BulkSceneUpdate(ctx context.Context, input BulkSceneU
 	return newRet, nil
 }
 
+// sceneDestroyOptions builds the options of a manual scene destroy. The scene
+// service decides whether the Tombstone is actually written.
+func sceneDestroyOptions(deleteGenerated, deleteFile, destroyFileEntry *bool, reason *string) scene.DestroyOptions {
+	var trimmedReason string
+	if reason != nil {
+		trimmedReason = strings.TrimSpace(*reason)
+	}
+
+	return scene.DestroyOptions{
+		DeleteGenerated:  utils.IsTrue(deleteGenerated),
+		DeleteFile:       utils.IsTrue(deleteFile),
+		DestroyFileEntry: utils.IsTrue(destroyFileEntry),
+		Tombstone: &scene.TombstoneOptions{
+			Origin: models.TombstoneOriginManual,
+			Reason: trimmedReason,
+		},
+	}
+}
+
 func (r *mutationResolver) SceneDestroy(ctx context.Context, input models.SceneDestroyInput) (bool, error) {
 	sceneID, err := strconv.Atoi(input.ID)
 	if err != nil {
@@ -485,9 +504,7 @@ func (r *mutationResolver) SceneDestroy(ctx context.Context, input models.SceneD
 		Paths:          manager.GetInstance().Paths,
 	}
 
-	deleteGenerated := utils.IsTrue(input.DeleteGenerated)
-	deleteFile := utils.IsTrue(input.DeleteFile)
-	destroyFileEntry := utils.IsTrue(input.DestroyFileEntry)
+	destroyOpts := sceneDestroyOptions(input.DeleteGenerated, input.DeleteFile, input.DestroyFileEntry, input.Reason)
 
 	if err := r.withTxn(ctx, func(ctx context.Context) error {
 		qb := r.repository.Scene
@@ -504,7 +521,7 @@ func (r *mutationResolver) SceneDestroy(ctx context.Context, input models.SceneD
 		// kill any running encoders
 		manager.KillRunningStreams(s, fileNamingAlgo)
 
-		return r.sceneService.Destroy(ctx, s, fileDeleter, deleteGenerated, deleteFile, destroyFileEntry)
+		return r.sceneService.Destroy(ctx, s, fileDeleter, destroyOpts)
 	}); err != nil {
 		fileDeleter.Rollback()
 		return false, err
@@ -540,9 +557,7 @@ func (r *mutationResolver) ScenesDestroy(ctx context.Context, input models.Scene
 		Paths:          manager.GetInstance().Paths,
 	}
 
-	deleteGenerated := utils.IsTrue(input.DeleteGenerated)
-	deleteFile := utils.IsTrue(input.DeleteFile)
-	destroyFileEntry := utils.IsTrue(input.DestroyFileEntry)
+	destroyOpts := sceneDestroyOptions(input.DeleteGenerated, input.DeleteFile, input.DestroyFileEntry, input.Reason)
 
 	if err := r.withTxn(ctx, func(ctx context.Context) error {
 		qb := r.repository.Scene
@@ -561,7 +576,7 @@ func (r *mutationResolver) ScenesDestroy(ctx context.Context, input models.Scene
 			// kill any running encoders
 			manager.KillRunningStreams(scene, fileNamingAlgo)
 
-			if err := r.sceneService.Destroy(ctx, scene, fileDeleter, deleteGenerated, deleteFile, destroyFileEntry); err != nil {
+			if err := r.sceneService.Destroy(ctx, scene, fileDeleter, destroyOpts); err != nil {
 				return err
 			}
 		}

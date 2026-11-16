@@ -61,22 +61,22 @@ func TestPlanScene(t *testing.T) {
 		{
 			name: "already translated, no force",
 			data: sceneData{title: "A Summer Day", tagIDs: []int{tagJapanese}, customFields: map[string]interface{}{
-				CustomFieldOriginalTitle: "ある夏の日",
+				models.CustomFieldOriginalTitle: "ある夏の日",
 			}},
 			opts: testOptions,
 		},
 		{
 			name: "force translates from the original",
 			data: sceneData{title: "A Summer Day", tagIDs: []int{tagJapanese}, customFields: map[string]interface{}{
-				CustomFieldOriginalTitle:  "ある夏の日",
-				CustomFieldSourceLanguage: "ja",
+				models.CustomFieldOriginalTitle: "ある夏の日",
+				CustomFieldSourceLanguage:       "ja",
 			}},
 			opts:      withForce(testOptions),
 			wantTitle: &fieldPlan{source: "ある夏の日", current: "A Summer Day", language: "ja"},
 		},
 		{
 			name:      "force without stored language detects it",
-			data:      sceneData{title: "A Summer Day", tagIDs: []int{tagJapanese}, customFields: map[string]interface{}{CustomFieldOriginalTitle: "ある夏の日"}},
+			data:      sceneData{title: "A Summer Day", tagIDs: []int{tagJapanese}, customFields: map[string]interface{}{models.CustomFieldOriginalTitle: "ある夏の日"}},
 			opts:      withForce(testOptions),
 			wantTitle: &fieldPlan{source: "ある夏の日", current: "A Summer Day", language: "ja"},
 		},
@@ -88,7 +88,7 @@ func TestPlanScene(t *testing.T) {
 		{
 			name: "source text written again becomes the new original",
 			data: sceneData{title: "新しい夏の日", tagIDs: []int{tagJapanese}, customFields: map[string]interface{}{
-				CustomFieldOriginalTitle: "ある夏の日",
+				models.CustomFieldOriginalTitle: "ある夏の日",
 			}},
 			opts:      testOptions,
 			wantTitle: &fieldPlan{source: "新しい夏の日", current: "新しい夏の日", language: "ja"},
@@ -96,7 +96,7 @@ func TestPlanScene(t *testing.T) {
 		{
 			name: "leftover source text in a translation keeps the original",
 			data: sceneData{title: "A温泉 trip with my mother", tagIDs: []int{tagJapanese}, customFields: map[string]interface{}{
-				CustomFieldOriginalTitle: "母と温泉旅行",
+				models.CustomFieldOriginalTitle: "母と温泉旅行",
 			}},
 			opts:         testOptions,
 			wantWarnings: 1,
@@ -104,7 +104,7 @@ func TestPlanScene(t *testing.T) {
 		{
 			name: "leftover source text with force translates the original",
 			data: sceneData{title: "A温泉 trip with my mother", tagIDs: []int{tagJapanese}, customFields: map[string]interface{}{
-				CustomFieldOriginalTitle: "母と温泉旅行",
+				models.CustomFieldOriginalTitle: "母と温泉旅行",
 			}},
 			opts:      withForce(testOptions),
 			wantTitle: &fieldPlan{source: "母と温泉旅行", current: "A温泉 trip with my mother", language: "ja"},
@@ -160,7 +160,7 @@ func TestTitleContext(t *testing.T) {
 	assert.Equal(t, "Performers: Yua Mikami (also: 三上悠亜); Jane Doe\nDetails: 夏の話", titleContext(d, p))
 
 	// details already translated: the original is the context
-	d2 := sceneData{title: "ある夏の日", details: "A summer story", customFields: map[string]interface{}{CustomFieldOriginalDetails: "夏の話"}}
+	d2 := sceneData{title: "ある夏の日", details: "A summer story", customFields: map[string]interface{}{models.CustomFieldOriginalDetails: "夏の話"}}
 	assert.Equal(t, "Details: 夏の話", titleContext(d2, scenePlan{}))
 
 	assert.Equal(t, "", titleContext(sceneData{}, scenePlan{}))
@@ -223,10 +223,10 @@ func TestApply(t *testing.T) {
 		return p.Title.Value == "A Summer Day" && p.Title.Set && !p.Details.Set
 	})).Return(&models.Scene{ID: 1}, nil).Once()
 	db.Scene.On("SetCustomFields", mock.Anything, 1, models.CustomFieldsInput{Partial: map[string]interface{}{
-		CustomFieldOriginalTitle:  "ある夏の日",
-		CustomFieldSourceLanguage: "ja",
-		CustomFieldProvider:       "fake:model",
-		CustomFieldTranslatedAt:   "2026-11-15T12:00:00Z",
+		models.CustomFieldOriginalTitle: "ある夏の日",
+		CustomFieldSourceLanguage:       "ja",
+		CustomFieldProvider:             "fake:model",
+		CustomFieldTranslatedAt:         "2026-11-15T12:00:00Z",
 	}}).Return(nil).Once()
 
 	hookInput, fields, err := Apply(context.Background(), db.Repository(), &SceneTranslation{
@@ -252,11 +252,11 @@ func TestApply(t *testing.T) {
 func TestRestore(t *testing.T) {
 	db := mocks.NewDatabase()
 	db.Scene.On("GetCustomFields", mock.Anything, 1).Return(map[string]interface{}{
-		CustomFieldOriginalTitle:  "ある夏の日",
-		CustomFieldSourceLanguage: "ja",
-		CustomFieldProvider:       "fake:model",
-		CustomFieldTranslatedAt:   "2026-11-15T12:00:00Z",
-		"other":                   "kept",
+		models.CustomFieldOriginalTitle: "ある夏の日",
+		CustomFieldSourceLanguage:       "ja",
+		CustomFieldProvider:             "fake:model",
+		CustomFieldTranslatedAt:         "2026-11-15T12:00:00Z",
+		"other":                         "kept",
 	}, nil)
 	db.Scene.On("UpdatePartial", mock.Anything, 1, mock.MatchedBy(func(p models.ScenePartial) bool {
 		return p.Title.Value == "ある夏の日" && !p.Details.Set

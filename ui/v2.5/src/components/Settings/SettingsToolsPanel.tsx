@@ -4,6 +4,7 @@ import { FormattedMessage } from "react-intl";
 import { Link } from "react-router-dom";
 import { Setting } from "./Inputs";
 import { SettingSection } from "./SettingSection";
+import { SettingsTombstonesSection } from "./SettingsTombstonesSection";
 import { PatchContainerComponent } from "src/patch";
 import { ExternalLink } from "../Shared/ExternalLink";
 
@@ -46,8 +47,19 @@ export const SettingsToolsPanel: React.FC = () => {
               </Link>
             }
           />
+
+          <Setting
+            heading={
+              <Link to="/tombstones">
+                <Button>
+                  <FormattedMessage id="config.tools.tombstones" />
+                </Button>
+              </Link>
+            }
+          />
         </SettingsToolsSection>
       </SettingSection>
+      <SettingsTombstonesSection />
     </>
   );
 };

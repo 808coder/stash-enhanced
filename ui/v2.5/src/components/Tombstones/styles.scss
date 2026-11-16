@@ -1,0 +1,429 @@
+#tombstones {
+  min-width: 0;
+  padding: 1.75rem 1.75rem 1.25rem;
+
+  .tombstone-heading p {
+    margin-bottom: 1.25rem;
+  }
+
+  .tombstone-toolbar {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .tombstone-search {
+    flex: 1 1 340px;
+    max-width: 560px;
+    min-width: 220px;
+  }
+
+  .tombstone-hide-male {
+    margin-left: auto;
+  }
+
+  .tombstone-count {
+    color: $text-muted;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .tombstone-table-frame {
+    border: 1px solid $body-bg;
+    border-radius: 0.25rem;
+    overflow: hidden;
+    transition: opacity 0.15s;
+
+    &.loading {
+      opacity: 0.6;
+    }
+  }
+
+  .tombstone-table-scroll {
+    overflow-x: auto;
+  }
+
+  // the sum of the grid's minimum track widths, gaps and padding
+  .tombstone-table {
+    min-width: 1450px;
+  }
+
+  // one grid shared by the header and every row keeps the columns aligned
+  .tombstone-grid {
+    align-items: center;
+    column-gap: 12px;
+    display: grid;
+    grid-template-columns:
+      36px minmax(240px, 2fr) 128px 112px 170px 96px 72px
+      minmax(220px, 1.8fr) 150px 84px;
+    padding: 0 1rem;
+
+    > [role="cell"],
+    > [role="columnheader"] {
+      min-width: 0;
+    }
+  }
+
+  .tombstone-head {
+    background-color: darken($card-bg, 3%);
+    border-bottom: 1px solid $body-bg;
+    min-height: 44px;
+  }
+
+  .tombstone-sort {
+    align-items: center;
+    background: none;
+    border: 0;
+    color: $text-muted;
+    display: inline-flex;
+    font-size: 0.75rem;
+    font-weight: 600;
+    gap: 6px;
+    letter-spacing: 0.04em;
+    padding: 0.5rem 0;
+    text-transform: uppercase;
+
+    .fa-icon {
+      font-size: 0.7rem;
+      opacity: 0;
+      transition: opacity 0.12s;
+    }
+
+    &:hover,
+    &.active {
+      color: $text-color;
+    }
+
+    &:hover .fa-icon {
+      opacity: 0.55;
+    }
+
+    &.active .fa-icon {
+      opacity: 1;
+    }
+
+    &:focus-visible {
+      outline: 2px solid $link-color;
+      outline-offset: 2px;
+    }
+  }
+
+  .tombstone-row {
+    border-bottom: 1px solid rgba(16, 22, 26, 0.45);
+    min-height: 60px;
+    transition: background-color 0.12s;
+
+    &:hover {
+      background-color: lighten($card-bg, 4%);
+    }
+
+    &.open {
+      background-color: lighten($card-bg, 2%);
+      border-bottom-color: transparent;
+    }
+  }
+
+  .tombstone-title {
+    color: $text-color;
+    display: block;
+    font-weight: 600;
+    max-width: 100%;
+    overflow: hidden;
+    padding: 0;
+    text-align: left;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+
+    &.untitled {
+      color: $text-muted;
+      font-style: italic;
+      font-weight: 500;
+    }
+  }
+
+  .tombstone-sub {
+    font-size: 0.78rem;
+  }
+
+  .tombstone-reason-badge {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    vertical-align: middle;
+
+  }
+
+  .tombstone-mono {
+    font-family: $font-family-monospace;
+    font-size: 0.78rem;
+  }
+
+  .tombstone-filename {
+    display: flex;
+    gap: 6px;
+  }
+
+  // names without spaces only truncate when they may break anywhere
+  .TruncatedText {
+    word-break: break-all;
+  }
+
+  .tombstone-actions {
+    display: flex;
+    gap: 6px;
+    justify-content: flex-end;
+
+    .btn {
+      padding: 0.3rem 0.6rem;
+    }
+  }
+
+  // files and identifiers side by side, the scene metadata below
+  .tombstone-details {
+    background-color: lighten($card-bg, 2%);
+    border-bottom: 1px solid rgba(16, 22, 26, 0.45);
+
+    > [role="cell"] {
+      display: grid;
+      gap: 16px 40px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      padding: 12px 24px 22px 64px;
+    }
+
+    dl {
+      align-content: start;
+      align-items: baseline;
+      display: grid;
+      gap: 6px 12px;
+      grid-template-columns: 104px minmax(0, 1fr);
+      margin: 0;
+    }
+
+    dt {
+      color: $text-muted;
+      font-size: 0.8rem;
+      font-weight: normal;
+      line-height: 24px;
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+
+    dd {
+      line-height: 24px;
+      margin: 0;
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+
+    .tombstone-endpoint {
+      color: $text-color;
+      font-weight: 600;
+    }
+  }
+
+  .tombstone-scene {
+    border-top: 1px solid rgba(191, 204, 214, 0.16);
+    grid-column: 1 / -1;
+    padding-top: 14px;
+  }
+
+  .tombstone-files {
+    min-width: 0;
+  }
+
+  .tombstone-file {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    line-height: 24px;
+    min-width: 0;
+
+    // further files of the same tombstone
+    + .tombstone-file {
+      border-top: 1px solid rgba(16, 22, 26, 0.45);
+      margin-top: 12px;
+      padding-top: 12px;
+    }
+  }
+
+  .tombstone-filename-full .tombstone-mono {
+    color: $text-color;
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
+
+  .tombstone-hashes {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 32px;
+  }
+
+  .tombstone-key {
+    color: $text-muted;
+    margin-right: 8px;
+  }
+
+  .tombstone-performers {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 16px;
+  }
+
+  .tombstone-created {
+    margin-right: 28px;
+  }
+
+  .tombstone-tags {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 1px 0;
+
+    .tag-item {
+      margin: 0;
+    }
+  }
+
+  .tombstone-urls {
+    align-items: flex-start;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+
+    a {
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .tombstone-more {
+      margin-top: 4px;
+    }
+  }
+
+  .tombstone-more {
+    font-size: 0.78rem;
+    line-height: 1.4;
+    padding: 0 0.5rem;
+  }
+
+  // collapsed to its first line
+  .tombstone-disclosure {
+    align-items: center;
+    color: $text-color;
+    display: flex;
+    gap: 6px;
+    max-width: 100%;
+    padding: 0;
+    text-align: left;
+
+    > span {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .fa-icon {
+      color: $text-muted;
+      flex: none;
+    }
+
+    &.open > span {
+      color: $text-muted;
+    }
+  }
+
+  .tombstone-longtext {
+    line-height: 1.5;
+    margin: 4px 0 0;
+    max-width: 100ch;
+    padding-left: 20px;
+  }
+
+  .matched-key {
+    margin-right: 0.25rem;
+  }
+
+  .tombstone-copy-line {
+    align-items: center;
+    display: flex;
+    gap: 8px;
+    min-width: 0;
+
+    > span {
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+
+    .btn {
+      flex: none;
+      line-height: 1;
+      padding: 0.25rem;
+    }
+  }
+
+  .tombstone-empty {
+    padding: 3rem 1.5rem;
+    text-align: center;
+  }
+
+  .tombstone-footer {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem 1.5rem;
+    justify-content: space-between;
+    padding-top: 1rem;
+  }
+
+  .tombstone-footer-info {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  @media (max-width: 767.98px) {
+    padding: 1rem;
+
+    .tombstone-details > [role="cell"] {
+      grid-template-columns: minmax(0, 1fr);
+      padding-left: 24px;
+    }
+  }
+}
+
+// deletion reasons in the settings
+.tombstone-reasons-input {
+  .tombstone-reason-color {
+    flex: 0 0 8rem;
+  }
+
+  .tombstone-reason-preview {
+    align-items: center;
+    display: flex;
+    padding: 0 0.5rem;
+    width: 12rem;
+  }
+}
+
+.tombstone-reasons-value {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.tombstone-reasons-input,
+.tombstone-reasons-value {
+  .tombstone-reason-badge {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    vertical-align: middle;
+  }
+}

@@ -17,18 +17,18 @@ import (
 	"github.com/stashapp/stash/pkg/translate"
 )
 
-// Custom field keys holding the original metadata of a translated scene.
+// Custom field keys holding the translation details of a translated scene.
+// The original metadata itself is kept under models.CustomFieldOriginalTitle
+// and models.CustomFieldOriginalDetails.
 const (
-	CustomFieldOriginalTitle   = "original_title"
-	CustomFieldOriginalDetails = "original_details"
-	CustomFieldSourceLanguage  = "translation_source_lang"
-	CustomFieldProvider        = "translation_provider"
-	CustomFieldTranslatedAt    = "translated_at"
+	CustomFieldSourceLanguage = "translation_source_lang"
+	CustomFieldProvider       = "translation_provider"
+	CustomFieldTranslatedAt   = "translated_at"
 )
 
 var allCustomFields = []string{
-	CustomFieldOriginalTitle,
-	CustomFieldOriginalDetails,
+	models.CustomFieldOriginalTitle,
+	models.CustomFieldOriginalDetails,
 	CustomFieldSourceLanguage,
 	CustomFieldProvider,
 	CustomFieldTranslatedAt,
@@ -115,13 +115,6 @@ type scenePlan struct {
 	warnings []string
 }
 
-func customFieldString(fields map[string]interface{}, key string) string {
-	if v, ok := fields[key].(string); ok {
-		return v
-	}
-	return ""
-}
-
 // sceneLanguages returns the language codes of the scene's mapped language
 // tags, sorted and without duplicates.
 func sceneLanguages(tagIDs []int, mappings map[int]string) []string {
@@ -184,14 +177,14 @@ func planScene(d sceneData, opts Options) scenePlan {
 		p.warnings = append(p.warnings, fmt.Sprintf("scene has several language tags: %s", strings.Join(langs, ", ")))
 	}
 
-	storedLang := customFieldString(d.customFields, CustomFieldSourceLanguage)
+	storedLang := models.CustomFieldString(d.customFields, CustomFieldSourceLanguage)
 
 	var warning string
-	p.title, warning = planField("title", d.title, customFieldString(d.customFields, CustomFieldOriginalTitle), storedLang, langs, opts.Force)
+	p.title, warning = planField("title", d.title, models.CustomFieldString(d.customFields, models.CustomFieldOriginalTitle), storedLang, langs, opts.Force)
 	if warning != "" {
 		p.warnings = append(p.warnings, warning)
 	}
-	p.details, warning = planField("details", d.details, customFieldString(d.customFields, CustomFieldOriginalDetails), storedLang, langs, opts.Force)
+	p.details, warning = planField("details", d.details, models.CustomFieldString(d.customFields, models.CustomFieldOriginalDetails), storedLang, langs, opts.Force)
 	if warning != "" {
 		p.warnings = append(p.warnings, warning)
 	}
@@ -220,8 +213,8 @@ func titleContext(d sceneData, p scenePlan) string {
 	switch {
 	case p.details != nil:
 		details = p.details.source
-	case customFieldString(d.customFields, CustomFieldOriginalDetails) != "":
-		details = customFieldString(d.customFields, CustomFieldOriginalDetails)
+	case models.CustomFieldString(d.customFields, models.CustomFieldOriginalDetails) != "":
+		details = models.CustomFieldString(d.customFields, models.CustomFieldOriginalDetails)
 	}
 	if strings.TrimSpace(details) != "" {
 		lines = append(lines, "Details: "+details)
@@ -393,7 +386,7 @@ func Apply(ctx context.Context, r models.Repository, t *SceneTranslation, now ti
 			return nil, nil, errors.New("title translation is empty")
 		}
 		partial.Title = models.NewOptionalString(t.Title.Translation)
-		cf[CustomFieldOriginalTitle] = t.Title.Source
+		cf[models.CustomFieldOriginalTitle] = t.Title.Source
 		hookInput.Title = &t.Title.Translation
 		fields = append(fields, "title")
 	}
@@ -402,7 +395,7 @@ func Apply(ctx context.Context, r models.Repository, t *SceneTranslation, now ti
 			return nil, nil, errors.New("details translation is empty")
 		}
 		partial.Details = models.NewOptionalString(t.Details.Translation)
-		cf[CustomFieldOriginalDetails] = t.Details.Source
+		cf[models.CustomFieldOriginalDetails] = t.Details.Source
 		hookInput.Details = &t.Details.Translation
 		fields = append(fields, "details")
 	}
@@ -443,12 +436,12 @@ func Restore(ctx context.Context, r models.Repository, sceneID int) (*models.Sce
 	partial := models.NewScenePartial()
 	var fields []string
 
-	if v, ok := cf[CustomFieldOriginalTitle].(string); ok {
+	if v, ok := cf[models.CustomFieldOriginalTitle].(string); ok {
 		partial.Title = models.NewOptionalString(v)
 		hookInput.Title = &v
 		fields = append(fields, "title")
 	}
-	if v, ok := cf[CustomFieldOriginalDetails].(string); ok {
+	if v, ok := cf[models.CustomFieldOriginalDetails].(string); ok {
 		partial.Details = models.NewOptionalString(v)
 		hookInput.Details = &v
 		fields = append(fields, "details")

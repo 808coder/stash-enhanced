@@ -64,6 +64,12 @@ models:
     model: github.com/stashapp/stash/internal/manager/config.ImageLightboxDisplayMode
   ImageLightboxScrollMode:
     model: github.com/stashapp/stash/internal/manager/config.ImageLightboxScrollMode
+  TombstoneReasonColor:
+    model: github.com/stashapp/stash/internal/manager/config.TombstoneReasonColor
+  TombstoneReason:
+    model: github.com/stashapp/stash/internal/manager/config.TombstoneReason
+  TombstoneReasonInput:
+    model: github.com/stashapp/stash/internal/manager/config.TombstoneReason
   ConfigDisableDropdownCreate:
     model: github.com/stashapp/stash/internal/manager/config.ConfigDisableDropdownCreate
   ScanMetadataOptions:

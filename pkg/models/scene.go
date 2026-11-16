@@ -235,10 +235,11 @@ type SceneUpdateInput struct {
 }
 
 type SceneDestroyInput struct {
-	ID               string `json:"id"`
-	DeleteFile       *bool  `json:"delete_file"`
-	DeleteGenerated  *bool  `json:"delete_generated"`
-	DestroyFileEntry *bool  `json:"destroy_file_entry"`
+	ID               string  `json:"id"`
+	DeleteFile       *bool   `json:"delete_file"`
+	DeleteGenerated  *bool   `json:"delete_generated"`
+	DestroyFileEntry *bool   `json:"destroy_file_entry"`
+	Reason           *string `json:"reason"`
 }
 
 type ScenesDestroyInput struct {
@@ -246,6 +247,7 @@ type ScenesDestroyInput struct {
 	DeleteFile       *bool    `json:"delete_file"`
 	DeleteGenerated  *bool    `json:"delete_generated"`
 	DestroyFileEntry *bool    `json:"destroy_file_entry"`
+	Reason           *string  `json:"reason"`
 }
 
 func NewSceneQueryResult(getter SceneGetter) *SceneQueryResult {

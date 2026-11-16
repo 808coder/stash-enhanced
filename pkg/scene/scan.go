@@ -39,6 +39,22 @@ type ScanGalleryFinderUpdater interface {
 	AddSceneIDs(ctx context.Context, galleryID int, sceneIDs []int) error
 }
 
+// TombstoneFinderDestroyer looks up and removes tombstones during scan.
+type TombstoneFinderDestroyer interface {
+	FindByFileFingerprints(ctx context.Context, oshash string, md5 string) ([]*models.Tombstone, error)
+	Destroy(ctx context.Context, id int) error
+}
+
+// TombstoneTagFinderCreator resolves the "previously deleted" tag.
+type TombstoneTagFinderCreator interface {
+	Find(ctx context.Context, id int) (*models.Tag, error)
+	FindByName(ctx context.Context, name string, nocase bool) (*models.Tag, error)
+	Create(ctx context.Context, newTag *models.CreateTagInput) error
+}
+
+// fallbackPreviouslyDeletedTagName is used when no tag is configured.
+const fallbackPreviouslyDeletedTagName = "Previously deleted"
+
 type ScanGenerator interface {
 	Generate(ctx context.Context, s *models.Scene, f *models.VideoFile) error
 }
@@ -53,6 +69,21 @@ type ScanHandler struct {
 
 	FileNamingAlgorithm models.HashAlgorithm
 	Paths               *paths.Paths
+
+	// Tombstones configures Tombstone handling for new scenes. nil skips it
+	// (the "Record tombstones" setting is off).
+	Tombstones *ScanTombstoneOptions
+}
+
+// ScanTombstoneOptions configures how a scan handles new scenes whose file
+// matches a Tombstone.
+type ScanTombstoneOptions struct {
+	Store TombstoneFinderDestroyer
+	Tags  TombstoneTagFinderCreator
+	// PreviouslyDeletedTagID is the tag added to scenes matching a manual
+	// Tombstone. 0, or a tag that no longer exists, falls back to a tag
+	// named "Previously deleted", created when missing.
+	PreviouslyDeletedTagID int
 }
 
 func (h *ScanHandler) validate() error {
@@ -115,6 +146,10 @@ func (h *ScanHandler) Handle(ctx context.Context, f models.File, oldFile models.
 		newScene := models.NewScene()
 
 		logger.Infof("%s doesn't exist. Creating new scene...", f.Base().Path)
+
+		if err := h.applyTombstones(ctx, &newScene, videoFile); err != nil {
+			return fmt.Errorf("applying tombstones: %w", err)
+		}
 
 		if err := h.CreatorUpdater.Create(ctx, &newScene, []models.FileID{videoFile.ID}); err != nil {
 			return fmt.Errorf("creating new scene: %w", err)

@@ -640,6 +640,28 @@
       "scan_for_content_desc": "Scan for new content and add it to the database.",
       "set_name_date_details_from_metadata_if_present": "Set name, date, details from embedded file metadata"
     },
+    "tombstones": {
+      "add_reason": "Add a reason",
+      "deletion_reasons": "Deletion reasons",
+      "deletion_reasons_description": "Reasons selectable when deleting a scene together with its files, each with a badge colour. The order is kept. At least one reason is required. A tombstone whose reason is no longer in this list shows a neutral badge.",
+      "previously_deleted_tag": "Previously deleted tag",
+      "previously_deleted_tag_default": "Previously deleted (default)",
+      "previously_deleted_tag_description": "Tag added to rescanned scenes that match a manually deleted scene. If unset, a tag named \"Previously deleted\" is used.",
+      "reason_color": "Colour",
+      "reason_colors": {
+        "blue": "Blue",
+        "green": "Green",
+        "neutral": "Neutral",
+        "red": "Red",
+        "teal": "Teal",
+        "yellow": "Yellow"
+      },
+      "reason_name": "Reason",
+      "reasons_required": "At least one deletion reason is required.",
+      "record": "Record tombstones",
+      "record_description": "Keep a tombstone of a scene when it is deleted together with its files, so it can be recognised if it shows up again.",
+      "title": "Tombstones"
+    },
     "tools": {
       "graphql_playground": "GraphQL playground",
       "heading": "Tools",
@@ -659,7 +681,8 @@
         "whitespace_chars": "Whitespace characters",
         "whitespace_chars_desc": "These characters will be replaced with whitespace in the title"
       },
-      "scene_tools": "Scene Tools"
+      "scene_tools": "Scene Tools",
+      "tombstones": "Tombstones"
     },
     "translation": {
       "apply_without_review": "Apply translations without review",
@@ -1786,6 +1809,63 @@
     "started_generating": "Started generating",
     "started_importing": "Started importing",
     "updated_entity": "Updated {entity}"
+  },
+  "tombstones": {
+    "actions": "Actions",
+    "copied": "Copied",
+    "copy_filename": "Copy filename",
+    "copy_path": "Copy path",
+    "copy_phash": "Copy phash",
+    "copy_stash_id": "Copy {endpoint} ID",
+    "created": "Created",
+    "delete_desc": "Delete the tombstone of \"{title}\"? Rescanned copies of this scene will no longer be recognised.",
+    "delete_title": "Delete tombstone",
+    "deleted": "Deleted",
+    "description": "Records of scenes that were deleted together with their files. Search by title, Filename, URL, studio code, Stash ID, oshash, md5 or phash.",
+    "edit_reason": "Edit reason",
+    "empty": "No tombstones found.",
+    "file": "File",
+    "find_phash": "Find scenes with this phash",
+    "match_keys": {
+      "basename": "Filename",
+      "code": "Code",
+      "md5": "MD5",
+      "oshash": "Oshash",
+      "phash": "Phash",
+      "stash_id": "Stash ID",
+      "title": "Title",
+      "url": "URL"
+    },
+    "matched_on": "Matched on",
+    "more_files": "{count, plural, one {# more file} other {# more files}}",
+    "no_files": "No files recorded",
+    "no_reason": "No reason given",
+    "no_reason_short": "No reason",
+    "o_count": "O {count}",
+    "origin": "Origin",
+    "origin_all": "All",
+    "origin_clean": "Removed by clean",
+    "origin_clean_short": "Automatic",
+    "origin_manual": "Deleted manually",
+    "origin_manual_short": "Manual",
+    "original_details": "Original details",
+    "original_title": "Original title",
+    "play_count": "{count, plural, one {# play} other {# plays}}",
+    "rating": "★ {value}/{max}",
+    "reason": "Reason",
+    "resolution_short": "Res.",
+    "search": "Search tombstones",
+    "show_less": "Show less",
+    "show_more": "+{count} more",
+    "size": "Size",
+    "tags_count": "Tags ({count})",
+    "title": "Tombstones",
+    "toast": {
+      "deleted": "Deleted tombstone",
+      "updated": "Updated reason"
+    },
+    "unrated": "Unrated",
+    "untitled": "Untitled scene"
   },
   "total": "Total",
   "translation": {

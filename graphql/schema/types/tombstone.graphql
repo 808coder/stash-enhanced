@@ -1,0 +1,168 @@
+# Tombstones: frozen snapshots of deleted scenes.
+# Kept in its own file (using extend) to limit merge conflicts with upstream.
+
+enum TombstoneOrigin {
+  "Scene destroyed by the user with delete file"
+  MANUAL
+  "Scene removed by the Clean task because its file was missing"
+  CLEAN
+}
+
+"The filter keys a Tombstone can match on"
+enum TombstoneMatchKey {
+  URL
+  STASH_ID
+  OSHASH
+  MD5
+  PHASH
+  CODE
+  TITLE
+  BASENAME
+}
+
+type TombstoneStashID {
+  endpoint: String!
+  stash_id: String!
+}
+
+"A studio frozen into a Tombstone"
+type TombstoneStudio {
+  name: String!
+  stash_ids: [TombstoneStashID!]!
+}
+
+"A performer frozen into a Tombstone"
+type TombstonePerformer {
+  name: String!
+  "Null for Tombstones recorded before gender was stored"
+  gender: GenderEnum
+  stash_ids: [TombstoneStashID!]!
+  "The library performer this still corresponds to, matched by stash ID, former id with the same name, or a unique name. Null when there is none."
+  performer: Performer
+}
+
+"A tag frozen into a Tombstone"
+type TombstoneTag {
+  name: String!
+  "The library tag with this name, ignoring case. Null when there is none."
+  tag: Tag
+}
+
+type TombstoneFile {
+  id: ID!
+  basename: String!
+  path: String!
+  size: Int64!
+  duration: Float!
+  width: Int!
+  height: Int!
+  video_codec: String!
+  bit_rate: Int64!
+  oshash: String!
+  md5: String!
+  "Perceptual hash as a hex string"
+  phash: String
+}
+
+type Tombstone {
+  id: ID!
+  deleted_at: Time!
+  origin: TombstoneOrigin!
+  "Empty when no reason was given"
+  reason: String!
+  "Id of the deleted scene, which no longer exists"
+  scene_id: ID!
+  title: String!
+  code: String!
+  date: String
+  urls: [String!]!
+  stash_ids: [TombstoneStashID!]!
+  original_title: String!
+  original_details: String!
+  details: String!
+  rating100: Int
+  o_counter: Int!
+  play_count: Int!
+  scene_created_at: Time!
+  studio: TombstoneStudio
+  performers: [TombstonePerformer!]!
+  "Tag names"
+  tags: [String!]!
+  "Tag names with the library tags they still correspond to"
+  tag_items: [TombstoneTag!]!
+  files: [TombstoneFile!]!
+}
+
+input TombstonePhashFilterInput {
+  "Perceptual hash as a hex string"
+  value: String!
+  "Hamming distance, exclusive like the scene phash_distance filter: matches phashes less than distance apart. 0 or null matches the exact phash"
+  distance: Int
+}
+
+"""
+All keys are optional and combined with OR. No keys returns all Tombstones.
+origin is not a key: it restricts the result (AND) and is never reported as a matched key.
+"""
+input TombstoneFilterInput {
+  "Only Tombstones of this Origin"
+  origin: TombstoneOrigin
+  url: String
+  stash_id: String
+  oshash: String
+  md5: String
+  "Studio code"
+  code: String
+  phash: TombstonePhashFilterInput
+  "Case-insensitive substring of title or original title"
+  title: String
+  """
+  Case-insensitive substring of the Filename. Extension and a trailing
+  resolution (e.g. .1080p, .4k) are ignored on both sides, so a release finds
+  the same release in another quality. Only a configured video extension is
+  stripped from the term; other dotted parts are searched as given.
+  """
+  basename: String
+}
+
+type TombstoneMatch {
+  tombstone: Tombstone!
+  "Filter keys this Tombstone matched on, empty without a filter"
+  matched_keys: [TombstoneMatchKey!]!
+}
+
+type TombstoneQueryResult {
+  "Total number of matches, not the page size"
+  count: Int!
+  "Number of MANUAL Tombstones matching the keys, ignoring the origin filter"
+  manual_count: Int!
+  "Number of CLEAN Tombstones matching the keys, ignoring the origin filter"
+  clean_count: Int!
+  "In the requested sort order, newest first by default"
+  matches: [TombstoneMatch!]!
+}
+
+input TombstoneUpdateInput {
+  id: ID!
+  "Empty clears the reason"
+  reason: String
+}
+
+extend type Query {
+  """
+  Find Tombstones. Of filter, page, per_page, sort and direction are used.
+  sort is one of deleted_at (default, newest first), title, origin, reason,
+  size, resolution, basename, phash; the file sorts use the first file of a
+  Tombstone. Tombstones without a value for the sort key come last.
+  """
+  findTombstones(
+    tombstone_filter: TombstoneFilterInput
+    filter: FindFilterType
+  ): TombstoneQueryResult!
+}
+
+extend type Mutation {
+  tombstoneDestroy(id: ID!): Boolean!
+  "Updates the reason only"
+  tombstoneUpdate(input: TombstoneUpdateInput!): Tombstone!
+}

@@ -284,6 +284,8 @@ ui/v2.5/
 **Migration Process** (`pkg/sqlite/migrate.go`):
 - The migrator runs pre-migration Go code, executes the SQL migration, then runs post-migration Go code for each version increment.
 
+**Fork-owned tables** (`fork_*`, e.g. Tombstones) are not part of this chain. `pkg/sqlite/fork_schema.go` creates them idempotently on every open, after upstream migrations, with its own `fork_schema_version` table. Never add a numbered migration for fork tables and never bump `appSchemaVersion` for them. See `docs/adr/0002-fork-schema-outside-upstream-migrations.md`.
+
 **Key Migrations**:
 - `32_files.up.sql` - Introduced file/folder abstraction
 - `45_blobs.up.sql` - Blob storage system

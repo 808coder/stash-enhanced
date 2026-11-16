@@ -79,6 +79,7 @@ type storeRepository struct {
 	Studio         *StudioStore
 	Tag            *TagStore
 	Group          *GroupStore
+	Tombstone      *TombstoneStore
 }
 
 type Database struct {
@@ -117,6 +118,7 @@ func NewDatabase() *Database {
 		Tag:            tagStore,
 		Group:          NewGroupStore(blobStore),
 		SavedFilter:    NewSavedFilterStore(),
+		Tombstone:      NewTombstoneStore(),
 	}
 
 	ret := &Database{
@@ -268,6 +270,11 @@ func (db *Database) initialise() error {
 	}
 	if err := db.openWriteDB(); err != nil {
 		return fmt.Errorf("opening write database: %w", err)
+	}
+
+	// fork-owned tables live outside upstream's migration chain (ADR 0002)
+	if err := runForkSchema(db.writeDB); err != nil {
+		return fmt.Errorf("running fork schema: %w", err)
 	}
 
 	return nil

@@ -7,6 +7,7 @@ import { useToast } from "src/hooks/Toast";
 import { useConfigurationContext } from "src/hooks/Config";
 import { FormattedMessage, useIntl } from "react-intl";
 import { faTrashAlt } from "@fortawesome/free-solid-svg-icons";
+import { ReasonSelect } from "src/components/Tombstones/ReasonSelect";
 import { objectPath } from "src/core/files";
 
 interface IDeleteSceneDialogProps {
@@ -43,6 +44,8 @@ export const DeleteScenesDialog: React.FC<IDeleteSceneDialogProps> = (
     config?.defaults.deleteGenerated ?? true
   );
 
+  const [reason, setReason] = useState("");
+
   const Toast = useToast();
   const [deleteScene] = useScenesDestroy(getScenesDeleteInput());
 
@@ -54,6 +57,7 @@ export const DeleteScenesDialog: React.FC<IDeleteSceneDialogProps> = (
       ids: props.selected.map((scene) => scene.id),
       delete_file: deleteFile,
       delete_generated: deleteGenerated,
+      reason: deleteFile && config?.tombstones.record ? reason : undefined,
     };
   }
 
@@ -166,6 +170,18 @@ export const DeleteScenesDialog: React.FC<IDeleteSceneDialogProps> = (
           })}
           onChange={() => setDeleteGenerated(!deleteGenerated)}
         />
+        {deleteFile && config?.tombstones.record && (
+          <Form.Group controlId="delete-reason" className="mt-3">
+            <Form.Label>
+              <FormattedMessage id="tombstones.reason" />
+            </Form.Label>
+            <ReasonSelect
+              id="delete-reason"
+              value={reason}
+              onChange={setReason}
+            />
+          </Form.Group>
+        )}
       </Form>
     </ModalComponent>
   );

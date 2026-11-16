@@ -2,6 +2,7 @@ package scene
 
 import (
 	"context"
+	"fmt"
 	"path/filepath"
 
 	"github.com/stashapp/stash/pkg/file"
@@ -107,9 +108,33 @@ func (d *FileDeleter) MarkMarkerFiles(scene *models.Scene, seconds int) error {
 	return d.FilesWithoutTrash(files)
 }
 
+// DestroyOptions controls what Destroy removes besides the scene row.
+type DestroyOptions struct {
+	DeleteGenerated bool
+	// DeleteFile removes the scene's files from the database and from disk.
+	DeleteFile bool
+	// DestroyFileEntry removes the scene's files from the database only.
+	// Ignored when DeleteFile is set.
+	DestroyFileEntry bool
+	// Tombstone requests a Tombstone for the scene. nil opts out (merge and
+	// other internal callers). See TombstoneOptions for when one is written.
+	Tombstone *TombstoneOptions
+}
+
 // Destroy deletes a scene and its associated relationships from the
-// database.
-func (s *Service) Destroy(ctx context.Context, scene *models.Scene, fileDeleter *FileDeleter, deleteGenerated, deleteFile, destroyFileEntry bool) error {
+// database. If requested, a Tombstone snapshot of the scene is stored first,
+// in the same transaction.
+func (s *Service) Destroy(ctx context.Context, scene *models.Scene, fileDeleter *FileDeleter, opts DestroyOptions) error {
+	if s.shouldRecordTombstone(opts) {
+		if err := s.recordTombstone(ctx, scene, *opts.Tombstone); err != nil {
+			return fmt.Errorf("recording tombstone for scene %d: %w", scene.ID, err)
+		}
+	}
+
+	deleteFile := opts.DeleteFile
+	destroyFileEntry := opts.DestroyFileEntry
+	deleteGenerated := opts.DeleteGenerated
+
 	mqb := s.MarkerRepository
 	markers, err := mqb.FindBySceneID(ctx, scene.ID)
 	if err != nil {

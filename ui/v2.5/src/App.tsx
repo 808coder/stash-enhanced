@@ -80,6 +80,9 @@ const Migrate = lazyComponent(() => import("./components/Setup/Migrate"));
 const SceneFilenameParser = lazyComponent(
   () => import("./components/SceneFilenameParser/SceneFilenameParser")
 );
+const Tombstones = lazyComponent(
+  () => import("./components/Tombstones/Tombstones")
+);
 const SceneDuplicateChecker = lazyComponent(
   () => import("./components/SceneDuplicateChecker/SceneDuplicateChecker")
 );
@@ -272,6 +275,7 @@ export const App: React.FC = () => {
               path="/sceneDuplicateChecker"
               component={SceneDuplicateChecker}
             />
+            <Route path="/tombstones" component={Tombstones} />
             <Route path="/setup" component={Setup} />
             <Route path="/welcome" component={Welcome} />
             <Route path="/migrate" component={Migrate} />

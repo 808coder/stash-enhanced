@@ -67,6 +67,7 @@ func makeConfigResult() *ConfigResult {
 		Defaults:    makeConfigDefaultsResult(),
 		UI:          makeConfigUIResult(),
 		Translation: makeConfigTranslationResult(),
+		Tombstones:  makeConfigTombstonesResult(),
 	}
 }
 
