@@ -7,6 +7,7 @@ import { useToast } from "src/hooks/Toast";
 import { useConfigurationContext } from "src/hooks/Config";
 import { FormattedMessage, useIntl } from "react-intl";
 import { faTrashAlt } from "@fortawesome/free-solid-svg-icons";
+import { ReasonSelect } from "src/components/Tombstones/ReasonSelect";
 import { objectPath } from "src/core/files";
 
 interface IDeleteSceneDialogProps {
@@ -174,15 +175,10 @@ export const DeleteScenesDialog: React.FC<IDeleteSceneDialogProps> = (
             <Form.Label>
               <FormattedMessage id="tombstones.reason" />
             </Form.Label>
-            <Form.Control
-              as="textarea"
-              rows={2}
-              className="text-input"
+            <ReasonSelect
+              id="delete-reason"
               value={reason}
-              placeholder={intl.formatMessage({
-                id: "tombstones.reason_placeholder",
-              })}
-              onChange={(e) => setReason(e.currentTarget.value)}
+              onChange={setReason}
             />
           </Form.Group>
         )}

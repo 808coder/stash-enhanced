@@ -6,12 +6,16 @@ type ConfigTombstonesResult {
   record: Boolean!
   "Tag added to rescanned scenes that were deleted manually. Null means a tag named 'Previously deleted' is used"
   previouslyDeletedTagId: ID
+  "Selectable deletion reasons, in display order. Defaults are used when none are configured"
+  reasons: [String!]!
 }
 
 input ConfigTombstonesInput {
   record: Boolean
   "Null leaves the setting unchanged; an empty string clears it"
   previouslyDeletedTagId: ID
+  "Null leaves the list unchanged. Entries are trimmed, empty and case-insensitive duplicate entries are dropped; at least one reason must remain"
+  reasons: [String!]
 }
 
 extend type ConfigResult {

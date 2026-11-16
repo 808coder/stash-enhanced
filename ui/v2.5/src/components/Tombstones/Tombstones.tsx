@@ -15,6 +15,7 @@ import { FileSize } from "../Shared/FileSize";
 import { Icon } from "../Shared/Icon";
 import { LoadingIndicator } from "../Shared/LoadingIndicator";
 import { ModalComponent } from "../Shared/Modal";
+import { ReasonSelect } from "./ReasonSelect";
 import { Pagination } from "../List/Pagination";
 
 const PAGE_SIZE = 25;
@@ -179,14 +180,7 @@ const EditReasonDialog: React.FC<{
       }}
       isRunning={saving}
     >
-      <Form.Control
-        as="textarea"
-        rows={4}
-        className="text-input"
-        value={reason}
-        placeholder={intl.formatMessage({ id: "tombstones.reason" })}
-        onChange={(e) => setReason(e.currentTarget.value)}
-      />
+      <ReasonSelect value={reason} onChange={setReason} />
     </ModalComponent>
   );
 };

@@ -1,6 +1,7 @@
 fragment ConfigTombstonesData on ConfigTombstonesResult {
   record
   previouslyDeletedTagId
+  reasons
 }
 
 fragment TombstoneData on Tombstone {
