@@ -540,10 +540,12 @@ const TombstoneRow: React.FC<{
           <button
             type="button"
             className={cx("tombstone-title", { untitled: !title })}
-            title={title || undefined}
+            title={title || file?.basename}
             onClick={onToggle}
           >
-            {title || <FormattedMessage id="tombstones.untitled" />}
+            {title || file?.basename || (
+              <FormattedMessage id="tombstones.untitled" />
+            )}
           </button>
           {meta && <div className="tombstone-sub text-muted">{meta}</div>}
         </div>
