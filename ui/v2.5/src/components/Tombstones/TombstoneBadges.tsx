@@ -1,7 +1,6 @@
 import React from "react";
 import { Badge } from "react-bootstrap";
 import { FormattedMessage, useIntl } from "react-intl";
-import cx from "classnames";
 import { faBolt, faUser } from "@fortawesome/free-solid-svg-icons";
 import * as GQL from "src/core/generated-graphql";
 import { useConfigurationContext } from "src/hooks/Config";
@@ -55,13 +54,12 @@ export const OriginBadge: React.FC<{ origin: GQL.TombstoneOrigin }> = ({
   );
 };
 
-// Truncated to one line in the table row, wrapped in full in the details.
+// Truncated to one line; the full reason is in the title.
 // The colour is looked up in the configured reasons unless given.
 export const ReasonBadge: React.FC<{
   reason: string;
   color?: GQL.TombstoneReasonColor;
-  wrap?: boolean;
-}> = ({ reason, color, wrap }) => {
+}> = ({ reason, color }) => {
   const { configuration } = useConfigurationContext();
   const c =
     color ?? reasonColor(reason, configuration?.tombstones.reasons ?? []);
@@ -70,8 +68,8 @@ export const ReasonBadge: React.FC<{
     <Badge
       pill
       variant={reasonColorVariant[c]}
-      className={cx("tombstone-reason-badge", { wrap })}
-      title={wrap ? undefined : reason}
+      className="tombstone-reason-badge"
+      title={reason}
     >
       {reason}
     </Badge>

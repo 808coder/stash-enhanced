@@ -4,8 +4,12 @@ import { useIntl } from "react-intl";
 const MiB = 1024 * 1024;
 const GiB = 1024 * MiB;
 
-// Always in whole MiB so sizes compare at a glance; GiB on hover.
-export const TombstoneFileSize: React.FC<{ size: number }> = ({ size }) => {
+// Always in whole MiB so sizes compare at a glance; GiB on hover, or after
+// it with showGiB.
+export const TombstoneFileSize: React.FC<{
+  size: number;
+  showGiB?: boolean;
+}> = ({ size, showGiB }) => {
   const intl = useIntl();
   const bytes = Number.isFinite(size) ? size : 0;
 
@@ -15,8 +19,9 @@ export const TombstoneFileSize: React.FC<{ size: number }> = ({ size }) => {
   });
 
   return (
-    <span title={`${gib} GiB`}>
+    <span title={showGiB ? undefined : `${gib} GiB`}>
       {intl.formatNumber(Math.round(bytes / MiB))} MiB
+      {showGiB && ` (${gib} GiB)`}
     </span>
   );
 };
