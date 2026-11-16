@@ -1,12 +1,24 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Badge, Button, ButtonGroup, Card, Form } from "react-bootstrap";
 import { FormattedMessage, useIntl } from "react-intl";
 import { Link } from "react-router-dom";
-import { faPencilAlt, faTrash } from "@fortawesome/free-solid-svg-icons";
+import cx from "classnames";
+import {
+  faArrowDown,
+  faArrowUp,
+  faBolt,
+  faCheck,
+  faChevronRight,
+  faCopy,
+  faPencilAlt,
+  faTrash,
+  faUser,
+} from "@fortawesome/free-solid-svg-icons";
 import * as GQL from "src/core/generated-graphql";
 import { useToast } from "src/hooks/Toast";
 import { useDebouncedState } from "src/hooks/debounce";
 import TextUtils from "src/utils/text";
+import NavUtils from "src/utils/navigation";
 import { getStashboxBase } from "src/utils/stashbox";
 import { ClearableInput } from "../Shared/ClearableInput";
 import { ErrorMessage } from "../Shared/ErrorMessage";
@@ -17,8 +29,6 @@ import { LoadingIndicator } from "../Shared/LoadingIndicator";
 import { ModalComponent } from "../Shared/Modal";
 import { ReasonSelect } from "./ReasonSelect";
 import { Pagination } from "../List/Pagination";
-
-const PAGE_SIZE = 25;
 
 const phashRE = /^[0-9a-fA-F]{16}$/;
 
@@ -100,18 +110,20 @@ const TombstonePerformers: React.FC<{
   hideMale: boolean;
 }> = ({ performers, hideMale }) => {
   const visible = visiblePerformers(performers, hideMale);
-  if (visible.length === 0) return null;
+  if (visible.length === 0) {
+    return (
+      <span className="text-muted">
+        <FormattedMessage id="none" />
+      </span>
+    );
+  }
 
   return (
-    <div className="mt-2 tombstone-performers">
-      <strong>
-        <FormattedMessage id="performers" />:{" "}
-      </strong>
+    <div className="tombstone-performers">
       {visible.map((p, i) => (
-        <React.Fragment key={i}>
-          {i > 0 && ", "}
+        <span key={i}>
           <TombstonePerformerLink performer={p} />
-        </React.Fragment>
+        </span>
       ))}
     </div>
   );
@@ -120,13 +132,16 @@ const TombstonePerformers: React.FC<{
 const TombstoneTags: React.FC<{ tags: TombstoneData["tag_items"] }> = ({
   tags,
 }) => {
-  if (tags.length === 0) return null;
+  if (tags.length === 0) {
+    return (
+      <span className="text-muted">
+        <FormattedMessage id="none" />
+      </span>
+    );
+  }
 
   return (
-    <div className="mt-2 tombstone-tags">
-      <strong>
-        <FormattedMessage id="tags" />:{" "}
-      </strong>
+    <div className="tombstone-tags">
       {tags.map((t) => (
         <Badge
           key={t.name}
@@ -233,127 +248,426 @@ const DeleteTombstoneDialog: React.FC<{
   );
 };
 
-const TombstoneCard: React.FC<{
+type SortKey =
+  | "title"
+  | "deleted_at"
+  | "origin"
+  | "reason"
+  | "size"
+  | "resolution"
+  | "basename"
+  | "phash";
+
+interface ISort {
+  key: SortKey;
+  direction: GQL.SortDirectionEnum;
+}
+
+const defaultSort: ISort = {
+  key: "deleted_at",
+  direction: GQL.SortDirectionEnum.Desc,
+};
+
+// Columns that start descending when first sorted by.
+const descendingFirst: SortKey[] = ["deleted_at", "size", "resolution"];
+
+const SortHeader: React.FC<{
+  sortKey: SortKey;
+  messageID: string;
+  sort: ISort;
+  onSort: (key: SortKey) => void;
+  className?: string;
+}> = ({ sortKey, messageID, sort, onSort, className }) => {
+  const active = sort.key === sortKey;
+  const ascending = sort.direction === GQL.SortDirectionEnum.Asc;
+
+  let ariaSort: "ascending" | "descending" | "none" = "none";
+  if (active) ariaSort = ascending ? "ascending" : "descending";
+
+  return (
+    <div role="columnheader" aria-sort={ariaSort} className={className}>
+      <button
+        type="button"
+        className={cx("tombstone-sort", { active })}
+        onClick={() => onSort(sortKey)}
+      >
+        <FormattedMessage id={messageID} />
+        <Icon icon={active && ascending ? faArrowUp : faArrowDown} />
+      </button>
+    </div>
+  );
+};
+
+// Reasons are free text from a configurable list, so the colour is a best
+// effort on the default reasons and neutral for everything else.
+function reasonVariant(reason: string) {
+  if (/duplicate/i.test(reason)) return "duplicate";
+  if (/replaced/i.test(reason)) return "replaced";
+  if (/quality|broken/i.test(reason)) return "quality";
+  return "neutral";
+}
+
+// navigator.clipboard only exists in secure contexts (https or localhost);
+// Stash is often served over plain http on a LAN, hence the fallback.
+function copyText(text: string) {
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(text).catch(() => {});
+    return;
+  }
+
+  const el = document.createElement("textarea");
+  el.value = text;
+  el.style.position = "fixed";
+  el.style.opacity = "0";
+  document.body.appendChild(el);
+  el.select();
+  try {
+    document.execCommand("copy");
+  } catch {
+    // nothing else to try
+  }
+  document.body.removeChild(el);
+}
+
+const CopyButton: React.FC<{ text: string; messageID: string }> = ({
+  text,
+  messageID,
+}) => {
+  const intl = useIntl();
+  const [copied, setCopied] = useState(false);
+  const timer = useRef<ReturnType<typeof setTimeout>>();
+
+  useEffect(() => () => clearTimeout(timer.current), []);
+
+  function onCopy() {
+    copyText(text);
+    setCopied(true);
+    clearTimeout(timer.current);
+    timer.current = setTimeout(() => setCopied(false), 1500);
+  }
+
+  const label = intl.formatMessage({
+    id: copied ? "tombstones.copied" : messageID,
+  });
+
+  return (
+    <button
+      type="button"
+      className={cx("tombstone-copy", { copied })}
+      title={label}
+      aria-label={label}
+      onClick={onCopy}
+    >
+      <Icon icon={copied ? faCheck : faCopy} />
+    </button>
+  );
+};
+
+const PhashLink: React.FC<{ phash?: string | null }> = ({ phash }) => {
+  const intl = useIntl();
+  if (!phash) return <span className="text-muted">—</span>;
+
+  return (
+    <Link
+      to={NavUtils.makeScenesPHashMatchUrl(phash)}
+      title={intl.formatMessage({ id: "tombstones.find_phash" })}
+    >
+      {phash}
+    </Link>
+  );
+};
+
+const TombstoneDetails: React.FC<{
   tombstone: TombstoneData;
   matchedKeys: GQL.TombstoneMatchKey[];
   hideMale: boolean;
-  onEdit: () => void;
-  onDelete: () => void;
-}> = ({ tombstone, matchedKeys, hideMale, onEdit, onDelete }) => {
+}> = ({ tombstone, matchedKeys, hideMale }) => {
   const intl = useIntl();
-  const title = tombstone.title || tombstone.original_title;
 
   return (
-    <Card className="mb-3 tombstone">
-      <Card.Body>
-        <div className="d-flex align-items-start">
-          <div className="mr-auto">
-            <h5>{title || <FormattedMessage id="tombstones.untitled" />}</h5>
-            <div className="text-muted">
-              <FormattedMessage
-                id="tombstones.deleted_at"
-                values={{
-                  date: TextUtils.formatDateTime(intl, tombstone.deleted_at),
-                }}
-              />
-              {" · "}
-              <FormattedMessage
-                id={
-                  tombstone.origin === GQL.TombstoneOrigin.Manual
-                    ? "tombstones.origin_manual"
-                    : "tombstones.origin_clean"
-                }
-              />
-              {tombstone.studio ? ` · ${tombstone.studio.name}` : ""}
-              {tombstone.date ? ` · ${tombstone.date}` : ""}
-            </div>
-          </div>
-          <ButtonGroup>
-            <Button
-              variant="secondary"
-              title={intl.formatMessage({ id: "tombstones.edit_reason" })}
-              onClick={onEdit}
-            >
-              <Icon icon={faPencilAlt} />
-            </Button>
-            <Button
-              variant="danger"
-              title={intl.formatMessage({ id: "actions.delete" })}
-              onClick={onDelete}
-            >
-              <Icon icon={faTrash} />
-            </Button>
-          </ButtonGroup>
-        </div>
-
-        {matchedKeys.length > 0 && (
-          <div className="mt-2">
-            <span className="mr-2">
-              <FormattedMessage id="tombstones.matched_on" />
-            </span>
-            {matchedKeys.map((k) => (
-              <Badge key={k} variant="info" className="matched-key">
-                <FormattedMessage id={matchKeyMessageIDs[k]} />
-              </Badge>
-            ))}
-          </div>
-        )}
-
-        <TombstonePerformers
-          performers={tombstone.performers}
-          hideMale={hideMale}
-        />
-        <TombstoneTags tags={tombstone.tag_items} />
-
-        <div className="mt-2 tombstone-reason">
-          <strong>
-            <FormattedMessage id="tombstones.reason" />:{" "}
-          </strong>
-          {tombstone.reason || (
+    <div role="row" className="tombstone-details">
+      <div role="cell">
+        <dl>
+          <dt>
+            <FormattedMessage id="performers" />
+          </dt>
+          <dd>
+            <TombstonePerformers
+              performers={tombstone.performers}
+              hideMale={hideMale}
+            />
+          </dd>
+          <dt>
+            <FormattedMessage id="tags" />
+          </dt>
+          <dd>
+            <TombstoneTags tags={tombstone.tag_items} />
+          </dd>
+          <dt>
+            <FormattedMessage id="tombstones.deleted" />
+          </dt>
+          <dd>
+            {TextUtils.formatDateTime(intl, tombstone.deleted_at)}
+            {" · "}
+            <FormattedMessage
+              id={
+                tombstone.origin === GQL.TombstoneOrigin.Manual
+                  ? "tombstones.origin_manual"
+                  : "tombstones.origin_clean"
+              }
+            />
+          </dd>
+          <dt>
+            <FormattedMessage id="tombstones.reason" />
+          </dt>
+          <dd className="tombstone-reason">
+            {tombstone.reason || <FormattedMessage id="tombstones.no_reason" />}
+          </dd>
+          {matchedKeys.length > 0 && (
+            <>
+              <dt>
+                <FormattedMessage id="tombstones.matched_on" />
+              </dt>
+              <dd>
+                {matchedKeys.map((k) => (
+                  <Badge key={k} variant="info" className="matched-key">
+                    <FormattedMessage id={matchKeyMessageIDs[k]} />
+                  </Badge>
+                ))}
+              </dd>
+            </>
+          )}
+        </dl>
+        <div>
+          {tombstone.files.length === 0 && (
             <span className="text-muted">
-              <FormattedMessage id="tombstones.no_reason" />
+              <FormattedMessage id="tombstones.no_files" />
+            </span>
+          )}
+          {tombstone.files.map((f) => (
+            <dl key={f.id} className="tombstone-file">
+              <dt>
+                <FormattedMessage id="filename" />
+              </dt>
+              <dd className="tombstone-mono tombstone-copy-line">
+                <span>{f.basename}</span>
+                <CopyButton
+                  text={f.basename}
+                  messageID="tombstones.copy_filename"
+                />
+              </dd>
+              <dt>
+                <FormattedMessage id="path" />
+              </dt>
+              <dd className="tombstone-mono tombstone-copy-line">
+                <span>{f.path}</span>
+                <CopyButton text={f.path} messageID="tombstones.copy_path" />
+              </dd>
+              <dt>
+                <FormattedMessage id="tombstones.file" />
+              </dt>
+              <dd className="tombstone-mono">
+                <FileSize size={f.size} />
+                {f.width && f.height ? ` · ${f.width}×${f.height}` : ""}
+                {f.video_codec ? ` · ${f.video_codec}` : ""}
+              </dd>
+              {f.oshash && (
+                <>
+                  <dt>oshash</dt>
+                  <dd className="tombstone-mono">{f.oshash}</dd>
+                </>
+              )}
+              {f.md5 && (
+                <>
+                  <dt>md5</dt>
+                  <dd className="tombstone-mono">{f.md5}</dd>
+                </>
+              )}
+              <dt>phash</dt>
+              <dd className="tombstone-mono">
+                <PhashLink phash={f.phash} />
+              </dd>
+            </dl>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const TombstoneRow: React.FC<{
+  tombstone: TombstoneData;
+  matchedKeys: GQL.TombstoneMatchKey[];
+  hideMale: boolean;
+  open: boolean;
+  onToggle: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+}> = ({
+  tombstone,
+  matchedKeys,
+  hideMale,
+  open,
+  onToggle,
+  onEdit,
+  onDelete,
+}) => {
+  const intl = useIntl();
+  const title = tombstone.title || tombstone.original_title;
+  const meta = [tombstone.studio?.name, tombstone.date]
+    .filter((v) => !!v)
+    .join(" · ");
+  const manual = tombstone.origin === GQL.TombstoneOrigin.Manual;
+  // the first file is the one the file columns sort by
+  const file = tombstone.files.length > 0 ? tombstone.files[0] : undefined;
+  const moreFiles = tombstone.files.length - 1;
+
+  return (
+    <div role="rowgroup">
+      <div role="row" className={cx("tombstone-grid tombstone-row", { open })}>
+        <div role="cell">
+          <button
+            type="button"
+            className={cx("tombstone-toggle", { open })}
+            aria-expanded={open}
+            aria-label={intl.formatMessage({ id: "tombstones.show_details" })}
+            onClick={onToggle}
+          >
+            <Icon icon={faChevronRight} />
+          </button>
+        </div>
+        <div role="cell" className="tombstone-title-cell">
+          <button
+            type="button"
+            className={cx("tombstone-title", { untitled: !title })}
+            title={title || undefined}
+            onClick={onToggle}
+          >
+            {title || <FormattedMessage id="tombstones.untitled" />}
+          </button>
+          {meta && <div className="tombstone-sub text-muted">{meta}</div>}
+        </div>
+        <div role="cell">
+          <div>{TextUtils.formatDate(intl, tombstone.deleted_at, false)}</div>
+          <div className="tombstone-sub text-muted">
+            {intl.formatTime(tombstone.deleted_at)}
+          </div>
+        </div>
+        <div role="cell">
+          <span
+            className={cx("tombstone-badge", manual ? "manual" : "clean")}
+            title={intl.formatMessage({
+              id: manual
+                ? "tombstones.origin_manual"
+                : "tombstones.origin_clean",
+            })}
+          >
+            <Icon icon={manual ? faUser : faBolt} />
+            <FormattedMessage
+              id={
+                manual
+                  ? "tombstones.origin_manual_short"
+                  : "tombstones.origin_clean_short"
+              }
+            />
+          </span>
+        </div>
+        <div role="cell">
+          {tombstone.reason ? (
+            <span
+              className={cx("tombstone-badge", reasonVariant(tombstone.reason))}
+              title={tombstone.reason}
+            >
+              {tombstone.reason}
+            </span>
+          ) : (
+            <span className="text-muted">
+              <FormattedMessage id="tombstones.no_reason_short" />
             </span>
           )}
         </div>
-
-        {tombstone.files.length > 0 && (
-          <ul className="mt-2 mb-0 list-unstyled">
-            {tombstone.files.map((f) => (
-              <li key={f.id} className="tombstone-file-path">
-                <div>
-                  <strong>
-                    <FormattedMessage id="filename" />:
-                  </strong>{" "}
-                  {f.basename}
-                </div>
-                <div>
-                  <strong>
-                    <FormattedMessage id="path" />:
-                  </strong>{" "}
-                  {f.path}
-                </div>
-                <div className="text-muted">
-                  <FileSize size={f.size} />
-                  {f.width && f.height ? ` · ${f.width}x${f.height}` : ""}
-                  {f.video_codec ? ` · ${f.video_codec}` : ""}
-                  {f.oshash ? ` · oshash ${f.oshash}` : ""}
-                  {f.md5 ? ` · md5 ${f.md5}` : ""}
-                  {f.phash ? ` · phash ${f.phash}` : ""}
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </Card.Body>
-    </Card>
+        <div role="cell" className="tombstone-mono text-right">
+          {file ? <FileSize size={file.size} /> : "—"}
+        </div>
+        <div
+          role="cell"
+          className="tombstone-mono text-right"
+          title={file?.height ? `${file.width}×${file.height}` : undefined}
+        >
+          {file?.height ? `${file.height}p` : "—"}
+        </div>
+        <div role="cell" className="tombstone-mono tombstone-filename">
+          <span title={file?.basename}>{file?.basename ?? "—"}</span>
+          {moreFiles > 0 && (
+            <span
+              className="text-muted"
+              title={intl.formatMessage(
+                { id: "tombstones.more_files" },
+                { count: moreFiles }
+              )}
+            >
+              +{moreFiles}
+            </span>
+          )}
+        </div>
+        <div role="cell" className="tombstone-mono">
+          <PhashLink phash={file?.phash} />
+        </div>
+        <div role="cell" className="tombstone-actions">
+          <Button
+            variant="secondary"
+            title={intl.formatMessage({ id: "tombstones.edit_reason" })}
+            aria-label={intl.formatMessage({ id: "tombstones.edit_reason" })}
+            onClick={onEdit}
+          >
+            <Icon icon={faPencilAlt} />
+          </Button>
+          <Button
+            variant="danger"
+            title={intl.formatMessage({ id: "tombstones.delete_title" })}
+            aria-label={intl.formatMessage({ id: "tombstones.delete_title" })}
+            onClick={onDelete}
+          >
+            <Icon icon={faTrash} />
+          </Button>
+        </div>
+      </div>
+      {open && (
+        <TombstoneDetails
+          tombstone={tombstone}
+          matchedKeys={matchedKeys}
+          hideMale={hideMale}
+        />
+      )}
+    </div>
   );
 };
+
+const pageSizes = [10, 25, 50, 100];
+
+const originFilters: {
+  origin?: GQL.TombstoneOrigin;
+  messageID: string;
+}[] = [
+  { messageID: "tombstones.origin_all" },
+  {
+    origin: GQL.TombstoneOrigin.Manual,
+    messageID: "tombstones.origin_manual_short",
+  },
+  {
+    origin: GQL.TombstoneOrigin.Clean,
+    messageID: "tombstones.origin_clean_short",
+  },
+];
 
 export const Tombstones: React.FC = () => {
   const intl = useIntl();
 
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+  const [origin, setOrigin] = useState<GQL.TombstoneOrigin>();
+  const [sort, setSort] = useState(defaultSort);
   const [searchInput, onSearchChange] = useDebouncedState<string>(
     "",
     (v) => {
@@ -362,83 +676,246 @@ export const Tombstones: React.FC = () => {
     },
     300
   );
+  const [opened, setOpened] = useState<Record<string, boolean>>({});
   const [editing, setEditing] = useState<TombstoneData>();
   const [deleting, setDeleting] = useState<TombstoneData>();
   // not persisted, like the detail panel toggle (#37)
   const [hideMale, setHideMale] = useState(false);
 
-  const { data, loading, error, refetch } = GQL.useFindTombstonesQuery({
+  const query = GQL.useFindTombstonesQuery({
     fetchPolicy: "no-cache",
     variables: {
-      tombstone_filter: getFilter(search),
-      filter: { page, per_page: PAGE_SIZE },
+      tombstone_filter: { ...getFilter(search), origin },
+      filter: {
+        page,
+        per_page: pageSize,
+        sort: sort.key,
+        direction: sort.direction,
+      },
     },
   });
+  const { loading, error, refetch } = query;
+  // keep showing the last result while the next one loads, so that sorting
+  // or paging does not unmount the table
+  const data = query.data ?? query.previousData;
 
-  function renderResults() {
+  function onSort(key: SortKey) {
+    const { Asc, Desc } = GQL.SortDirectionEnum;
+    if (sort.key === key) {
+      setSort({ key, direction: sort.direction === Asc ? Desc : Asc });
+    } else {
+      setSort({ key, direction: descendingFirst.includes(key) ? Desc : Asc });
+    }
+    setPage(1);
+  }
+
+  function onDeleted() {
+    // step back when the last tombstone of the last page is gone
+    if (data && data.findTombstones.matches.length === 1 && page > 1) {
+      setPage(page - 1);
+    } else {
+      refetch();
+    }
+  }
+
+  function renderOriginFilter() {
+    const result = data?.findTombstones;
+    const counts = result && {
+      all: result.manual_count + result.clean_count,
+      [GQL.TombstoneOrigin.Manual]: result.manual_count,
+      [GQL.TombstoneOrigin.Clean]: result.clean_count,
+    };
+
+    return (
+      <ButtonGroup
+        role="group"
+        aria-label={intl.formatMessage({ id: "tombstones.origin" })}
+      >
+        {originFilters.map((f) => (
+          <Button
+            key={f.origin ?? "all"}
+            variant="secondary"
+            active={origin === f.origin}
+            aria-pressed={origin === f.origin}
+            onClick={() => {
+              setOrigin(f.origin);
+              setPage(1);
+            }}
+          >
+            <FormattedMessage id={f.messageID} />
+            {counts && (
+              <span className="tombstone-count">
+                {" · "}
+                {intl.formatNumber(counts[f.origin ?? "all"])}
+              </span>
+            )}
+          </Button>
+        ))}
+      </ButtonGroup>
+    );
+  }
+
+  function renderTable() {
     if (error) return <ErrorMessage error={error.message} />;
     if (!data) return <LoadingIndicator />;
 
     const { count, matches } = data.findTombstones;
+    const first = Math.min((page - 1) * pageSize + 1, count);
+    const last = Math.min(first + matches.length - 1, count);
+
+    const header = (key: SortKey, messageID: string, className?: string) => (
+      <SortHeader
+        sortKey={key}
+        messageID={messageID}
+        sort={sort}
+        onSort={onSort}
+        className={className}
+      />
+    );
 
     return (
       <>
-        <div className="d-flex mt-2 mb-2">
-          <h6 className="mr-auto align-self-center">
-            <FormattedMessage id="tombstones.found" values={{ count }} />
-          </h6>
-          <Form.Check
-            type="switch"
-            id="tombstones-hide-male"
-            className="align-self-center mr-3"
-            checked={hideMale}
-            onChange={() => setHideMale(!hideMale)}
-            label={<FormattedMessage id="hide_male_performers" />}
-          />
+        <div className={cx("tombstone-table-frame", { loading })}>
+          <div className="tombstone-table-scroll">
+            <div
+              role="table"
+              className="tombstone-table"
+              aria-label={intl.formatMessage({ id: "tombstones.title" })}
+              aria-rowcount={count}
+              aria-busy={loading}
+            >
+              <div role="rowgroup">
+                <div role="row" className="tombstone-grid tombstone-head">
+                  <div role="columnheader">
+                    <span className="sr-only">
+                      <FormattedMessage id="details" />
+                    </span>
+                  </div>
+                  {header("title", "title")}
+                  {header("deleted_at", "tombstones.deleted")}
+                  {header("origin", "tombstones.origin")}
+                  {header("reason", "tombstones.reason")}
+                  {header("size", "tombstones.size", "text-right")}
+                  {header(
+                    "resolution",
+                    "tombstones.resolution_short",
+                    "text-right"
+                  )}
+                  {header("basename", "filename")}
+                  {header("phash", "tombstones.match_keys.phash")}
+                  <div role="columnheader">
+                    <span className="sr-only">
+                      <FormattedMessage id="tombstones.actions" />
+                    </span>
+                  </div>
+                </div>
+              </div>
+              {matches.map((m) => (
+                <TombstoneRow
+                  key={m.tombstone.id}
+                  tombstone={m.tombstone}
+                  matchedKeys={m.matched_keys}
+                  hideMale={hideMale}
+                  open={!!opened[m.tombstone.id]}
+                  onToggle={() =>
+                    setOpened({
+                      ...opened,
+                      [m.tombstone.id]: !opened[m.tombstone.id],
+                    })
+                  }
+                  onEdit={() => setEditing(m.tombstone)}
+                  onDelete={() => setDeleting(m.tombstone)}
+                />
+              ))}
+              {matches.length === 0 && (
+                <div role="rowgroup">
+                  <div role="row" className="tombstone-empty">
+                    <div role="cell" className="text-muted">
+                      <FormattedMessage id="tombstones.empty" />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="tombstone-footer">
+          <div className="tombstone-footer-info">
+            <span>
+              <strong>
+                {count === 0
+                  ? intl.formatNumber(0)
+                  : `${intl.formatNumber(first)}–${intl.formatNumber(last)}`}
+              </strong>{" "}
+              <span className="text-muted">
+                <FormattedMessage id="tombstones.of_total" values={{ count }} />
+              </span>
+            </span>
+            <Form.Group
+              controlId="tombstones-page-size"
+              className="tombstone-page-size text-muted"
+            >
+              <Form.Label>
+                <FormattedMessage id="tombstones.per_page" />
+              </Form.Label>
+              <Form.Control
+                as="select"
+                className="input-control"
+                value={pageSize}
+                onChange={(e) => {
+                  setPageSize(Number(e.currentTarget.value));
+                  setPage(1);
+                }}
+              >
+                {pageSizes.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </Form.Control>
+            </Form.Group>
+          </div>
           <Pagination
-            itemsPerPage={PAGE_SIZE}
+            itemsPerPage={pageSize}
             currentPage={page}
             totalItems={count}
             metadataByline={[]}
             onChangePage={setPage}
           />
         </div>
-        {loading && <LoadingIndicator />}
-        {matches.length === 0 && !loading && (
-          <p className="text-muted">
-            <FormattedMessage id="tombstones.empty" />
-          </p>
-        )}
-        {matches.map((m) => (
-          <TombstoneCard
-            key={m.tombstone.id}
-            tombstone={m.tombstone}
-            matchedKeys={m.matched_keys}
-            hideMale={hideMale}
-            onEdit={() => setEditing(m.tombstone)}
-            onDelete={() => setDeleting(m.tombstone)}
-          />
-        ))}
       </>
     );
   }
 
   return (
-    <Card id="tombstones" className="col col-xl-10 mx-auto">
-      <div className="px-4 pt-3">
+    <Card id="tombstones" className="col mx-auto">
+      <div className="tombstone-heading">
         <h4>
           <FormattedMessage id="tombstones.title" />
         </h4>
         <p className="text-muted">
           <FormattedMessage id="tombstones.description" />
         </p>
+      </div>
+      <div className="tombstone-toolbar">
         <ClearableInput
+          className="tombstone-search"
           value={searchInput}
           setValue={onSearchChange}
           placeholder={intl.formatMessage({ id: "tombstones.search" })}
         />
+        {renderOriginFilter()}
+        <Form.Check
+          type="switch"
+          id="tombstones-hide-male"
+          className="tombstone-hide-male"
+          checked={hideMale}
+          onChange={() => setHideMale(!hideMale)}
+          label={<FormattedMessage id="hide_male_performers" />}
+        />
       </div>
-      <div className="px-4 pb-3">{renderResults()}</div>
+      {renderTable()}
       {editing && (
         <EditReasonDialog
           tombstone={editing}
@@ -453,7 +930,7 @@ export const Tombstones: React.FC = () => {
           tombstone={deleting}
           onClose={(deleted) => {
             setDeleting(undefined);
-            if (deleted) refetch();
+            if (deleted) onDeleted();
           }}
         />
       )}

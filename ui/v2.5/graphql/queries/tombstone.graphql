@@ -4,6 +4,8 @@ query FindTombstones(
 ) {
   findTombstones(tombstone_filter: $tombstone_filter, filter: $filter) {
     count
+    manual_count
+    clean_count
     matches {
       matched_keys
       tombstone {
