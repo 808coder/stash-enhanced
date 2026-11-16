@@ -1,6 +1,7 @@
-// Package translation machine-translates scene metadata with the active
-// translation provider and keeps the original metadata in custom fields.
-// See docs/adr/0001-original-metadata-in-custom-fields.md.
+// Package translation machine-translates scene metadata and tag names with
+// the active translation provider. Scenes keep the original metadata in
+// custom fields (see docs/adr/0001-original-metadata-in-custom-fields.md);
+// tags keep their old name as an alias.
 package translation
 
 import (
@@ -33,7 +34,7 @@ var allCustomFields = []string{
 	CustomFieldTranslatedAt,
 }
 
-// Options controls which scenes and fields are translated.
+// Options controls which scenes, fields and tags are translated.
 type Options struct {
 	// LanguageMappings maps language tag IDs to language codes.
 	LanguageMappings map[int]string
@@ -41,6 +42,9 @@ type Options struct {
 	// Force re-translates fields from their original metadata, even if they
 	// are no longer in the source language.
 	Force bool
+	// MergeOnCollision merges a tag into the tag whose name or alias matches
+	// its translation. Otherwise the tag is skipped.
+	MergeOnCollision bool
 }
 
 // FieldTranslation is the translation of one scene field.

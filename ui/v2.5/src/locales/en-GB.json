@@ -1878,10 +1878,16 @@
     "dialog_title": "Translate scene",
     "original": "Original",
     "task": {
-      "description": "Translates title and details of all scenes with a mapped language tag that are still in the source language.",
+      "description": "Translates title and details of all scenes with a mapped language tag, and the names of tags in a mapped language, that are still in the source language.",
       "force": "Re-translate",
       "force_description": "Also translate scenes again from their original metadata",
-      "heading": "Translate metadata"
+      "heading": "Translate metadata",
+      "merge_on_collision": "Merge on collision",
+      "merge_on_collision_description": "If a translation is the name or alias of another tag, merge the tag into it. Merges cannot be undone. Otherwise the tag is skipped.",
+      "scenes": "Scenes",
+      "scenes_description": "Translate scene titles and details",
+      "tags": "Tags",
+      "tags_description": "Rename tags to their translation, for all scenes, images, galleries etc. The old name is kept as an alias."
     },
     "toast": {
       "nothing_to_translate": "Nothing to translate",
