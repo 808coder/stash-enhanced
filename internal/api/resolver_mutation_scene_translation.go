@@ -16,7 +16,7 @@ import (
 	"github.com/stashapp/stash/pkg/sliceutil/stringslice"
 )
 
-// sceneHooks adapts the resolver's hook executor to translation.HookExecutor.
+// sceneHooks adapts the resolver's hook executor to translation.SceneHookExecutor.
 type sceneHooks struct {
 	r *mutationResolver
 }
@@ -72,7 +72,7 @@ func (r *mutationResolver) translateScene(ctx context.Context, id string, force 
 	if err != nil {
 		return nil, err
 	}
-	opts := translation.OptionsFromConfig(c, force != nil && *force)
+	opts := translation.OptionsFromConfig(c, force != nil && *force, false)
 
 	var t *translation.SceneTranslation
 	if save {
@@ -183,7 +183,20 @@ func (r *mutationResolver) MetadataTranslate(ctx context.Context, input Translat
 		return "", fmt.Errorf("converting ids: %w", err)
 	}
 
-	jobID, err := manager.GetInstance().TranslateMetadata(ctx, sceneIDs, input.Force != nil && *input.Force)
+	boolOr := func(b *bool, def bool) bool {
+		if b == nil {
+			return def
+		}
+		return *b
+	}
+
+	jobID, err := manager.GetInstance().TranslateMetadata(ctx, manager.TranslateMetadataOptions{
+		Scenes:           boolOr(input.Scenes, true),
+		SceneIDs:         sceneIDs,
+		Force:            boolOr(input.Force, false),
+		Tags:             boolOr(input.Tags, false),
+		MergeOnCollision: boolOr(input.MergeOnCollision, true),
+	})
 	if err != nil {
 		return "", err
 	}
