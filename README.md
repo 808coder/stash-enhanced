@@ -15,7 +15,21 @@ Features that are only available in Stash Enhanced:
 
 ## Installing
 
-There are no prebuilt binaries yet. A Docker image is planned. For now, build Stash Enhanced from source:
+Prebuilt binaries are attached to each [release](https://github.com/808coder/stash-enhanced/releases):
+
+| Windows | Linux (amd64) | Docker |
+|:---:|:---:|:---:|
+| [stash-win.exe](https://github.com/808coder/stash-enhanced/releases/latest/download/stash-win.exe) | [stash-linux](https://github.com/808coder/stash-enhanced/releases/latest/download/stash-linux) | [`808coder/stash-enhanced`](https://hub.docker.com/r/808coder/stash-enhanced) |
+
+There are no macOS builds.
+
+### Windows
+
+Windows 10 or Server 2016 or newer is required.
+
+The exe isn't signed, so Windows SmartScreen may block it on first start. Click "More info" and then "Run anyway".
+
+### Building from source
 
 ```sh
 git clone https://github.com/808coder/stash-enhanced.git
