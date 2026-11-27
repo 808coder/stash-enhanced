@@ -13,16 +13,20 @@ on:
       - develop
   release:
     types: [ published ]
+  # Manual run, e.g. on develop before tagging a release: also builds and
+  # smoke-tests Windows, which PRs and develop pushes skip. Pushes nothing.
+  workflow_dispatch:
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  # event_name keeps a manual run from cancelling a develop push run (same ref)
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
   contents: read
 
 env:
-  # Only used by matrix entries with `container: true` (cross-compiled targets).
+  # Only used by cross-compiled build platforms (everything but linux).
   COMPILER_IMAGE: ghcr.io/stashapp/compiler:14
   DOCKER_IMAGE: 808coder/stash-enhanced
   # Builds from develop and releases are this fork's official builds; PR builds are not.
@@ -120,28 +124,20 @@ jobs:
 
   # Job 3: Build binaries, one runner per platform.
   #
-  # To add a platform, add a matrix entry (see the build-cc-* targets in the
-  # Makefile) and list its binary in the release job's RELEASE_FILES.
-  # - container: false -> built natively on the runner (host-arch only)
-  # - container: true  -> built inside $COMPILER_IMAGE (cross-compilers)
+  # Each platform runs `make build-cc-<platform>` (see the Makefile) and must
+  # write a single dist/stash-* binary; list it in the release job's RELEASE_FILES.
+  # - linux:  built natively on the runner (host-arch only)
+  # - others: built inside $COMPILER_IMAGE (cross-compilers)
+  #
+  # Windows is only built for releases and manual runs (workflow_dispatch).
+  # (`include` can't be used for this: its entries survive `exclude`.)
   build:
     needs: generate
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
-        include:
-        - platform: linux
-          make-target: build-cc-linux
-          container: false
-          artifact-paths: |
-            dist/stash-linux
-        # Example cross-compiled entry:
-        # - platform: windows
-        #   make-target: build-cc-windows
-        #   container: true
-        #   artifact-paths: |
-        #     dist/stash-win.exe
+        platform: ${{ fromJSON((github.event_name == 'release' || github.event_name == 'workflow_dispatch') && '["linux", "windows"]' || '["linux"]') }}
 
     steps:
     - uses: actions/checkout@v6
@@ -156,25 +152,25 @@ jobs:
 
     # --- native build ---
     - name: Setup Go
-      if: ${{ !matrix.container }}
+      if: ${{ matrix.platform == 'linux' }}
       uses: actions/setup-go@v6
       with:
         go-version-file: 'go.mod'
 
     - name: Build (${{ matrix.platform }}, native)
-      if: ${{ !matrix.container }}
-      run: make ${{ matrix.make-target }}
+      if: ${{ matrix.platform == 'linux' }}
+      run: make build-cc-${{ matrix.platform }}
 
     # --- cross build in compiler container ---
     - name: Cache Go build
-      if: ${{ matrix.container }}
+      if: ${{ matrix.platform != 'linux' }}
       uses: actions/cache@v5
       with:
         path: .go-cache
         key: ${{ runner.os }}-go-cache-${{ matrix.platform }}-${{ hashFiles('go.mod', '**/go.sum') }}
 
     - name: Build (${{ matrix.platform }}, container)
-      if: ${{ matrix.container }}
+      if: ${{ matrix.platform != 'linux' }}
       run: |
         mkdir -p .go-cache
         docker run --rm \
@@ -182,21 +178,52 @@ jobs:
           --mount type=bind,source="$(pwd)/.go-cache",target=/root/.cache/go-build \
           --env OFFICIAL_BUILD --env UPDATE_REPO \
           -w /stash "$COMPILER_IMAGE" \
-          /bin/bash -c "git config --global --add safe.directory /stash && make ${{ matrix.make-target }}"
+          /bin/bash -c "git config --global --add safe.directory /stash && make build-cc-${{ matrix.platform }}"
 
     - name: Upload build artifact
       uses: actions/upload-artifact@v7
       with:
         name: build-${{ matrix.platform }}
         retention-days: 1
-        path: ${{ matrix.artifact-paths }}
+        path: dist/stash-*
+        if-no-files-found: error
 
-  # Job 4: Docker image.
+  # Job 4: Start the Windows binary on a Windows runner (no GPU, so no
+  # hardware acceleration check). Runs whenever Windows is built.
+  smoke-windows:
+    needs: build
+    if: ${{ github.event_name == 'release' || github.event_name == 'workflow_dispatch' }}
+    runs-on: windows-latest
+    # a fatal error can open a dialog on Windows, which would hang the job
+    timeout-minutes: 5
+    steps:
+    - name: Download windows binary
+      uses: actions/download-artifact@v8
+      with:
+        name: build-windows
+
+    - name: Smoke test
+      shell: pwsh
+      run: |
+        $out = & .\stash-win.exe --version
+        if ($LASTEXITCODE -ne 0 -or -not $out) { exit 1 }
+        Write-Output $out
+
+  # Job 5: Docker image.
   # Always built and smoke-tested; pushed to Docker Hub only for published
   # v* releases (:latest + :<tag>).
   docker:
-    needs: [test, build]
+    needs: [test, build, smoke-windows]
+    # smoke-windows is skipped on PRs and develop pushes; a failed one blocks the push
+    if: >-
+      ${{ !cancelled()
+      && needs.test.result == 'success'
+      && needs.build.result == 'success'
+      && contains(fromJSON('["success", "skipped"]'), needs.smoke-windows.result) }}
     runs-on: ubuntu-24.04
+    env:
+      # don't upload a .dockerbuild record artifact per run (kept for the repo's retention period)
+      DOCKER_BUILD_RECORD_UPLOAD: false
     steps:
     - uses: actions/checkout@v6
 
@@ -268,10 +295,11 @@ jobs:
           org.opencontainers.image.revision=${{ github.sha }}
         cache-from: type=gha,scope=docker
 
-  # Job 5: Attach assets to a published v* release.
+  # Job 6: Attach assets to a published v* release.
   # Don't create tags starting with "v" for anything other than real releases.
+  # No status check in `if`, so it only runs if all needed jobs succeeded.
   release:
-    needs: [test, build]
+    needs: [test, build, smoke-windows]
     if: ${{ github.event_name == 'release' && startsWith(github.ref, 'refs/tags/v') }}
     runs-on: ubuntu-24.04
     permissions:
@@ -279,7 +307,7 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
       # binaries from the build matrix; extend when adding platforms
-      RELEASE_FILES: dist/stash-linux
+      RELEASE_FILES: dist/stash-linux dist/stash-win.exe
     steps:
     - uses: actions/checkout@v6
       with:

@@ -25,13 +25,24 @@ After every upstream merge, run `gh workflow list -R 808coder/stash-enhanced --a
 
 ## What runs when
 
-| Event | Build + test | Docker image | GitHub release |
-|---|---|---|---|
-| PR into `develop` | yes | built + smoke test, not pushed | none |
-| Push to `develop` | yes | built + smoke test, not pushed | none |
-| Release `v*` published | yes | `:latest` + `:<tag>` | assets uploaded to that release |
+| Event | Build + test | Windows build + smoke test | Docker image | GitHub release |
+|---|---|---|---|---|
+| PR into `develop` | yes | no | built + smoke test, not pushed | none |
+| Push to `develop` | yes | no | built + smoke test, not pushed | none |
+| Manual run (`workflow_dispatch`) | yes | yes | built + smoke test, not pushed | none |
+| Release `v*` published | yes | yes | `:latest` + `:<tag>` | assets uploaded to that release |
 
-Jobs: `generate` (Go codegen + UI), then `test` and `build` in parallel, then `docker` and `release` (releases only).
+Jobs: `generate` (Go codegen + UI), then `test` and `build` in parallel, then `smoke-windows` (only when Windows is built), then `docker` and `release` (releases only). A failed Windows build or smoke test blocks both the Docker push and the release assets.
+
+### Checking Windows before a release
+
+Windows is only built for releases and manual runs. A release runs the workflow from the tagged commit, so a broken Windows build can only be fixed with a new tag. Before tagging, start a manual run on `develop` and check that `build (windows)` and `smoke-windows` pass:
+
+```bash
+gh workflow run fork-build.yml --ref develop -R 808coder/stash-enhanced
+```
+
+The smoke test only runs `stash-win.exe --version` on a `windows-latest` runner. It doesn't check hardware acceleration, because the runner has no GPU.
 
 Binaries from any run (including `develop` pushes) can be downloaded from the run's artifacts in the Actions tab for 1 day.
 
@@ -73,19 +84,17 @@ Tags and releases use the built-in `GITHUB_TOKEN`; the `release` job requests `c
 
 ## Adding a platform
 
-Only `linux/amd64` is built today. It is built natively on `ubuntu-24.04` with CGO (`make build-cc-linux`, static-pie, so the binary has no glibc dependency and runs in the Alpine image).
+Two platforms are built today:
 
-To add a target, for example Windows:
+- `linux` (`linux/amd64`): built natively on `ubuntu-24.04` with CGO (`make build-cc-linux`, static-pie, so the binary has no glibc dependency and runs in the Alpine image).
+- `windows` (`windows/amd64`, `stash-win.exe`): cross-compiled with mingw in `ghcr.io/stashapp/compiler` (`make build-cc-windows`, static). Releases and manual runs only. The exe is unsigned.
 
-1. Add a matrix entry to the `build` job:
-   ```yaml
-   - platform: windows
-     make-target: build-cc-windows
-     container: true          # cross-compilers come from ghcr.io/stashapp/compiler
-     artifact-paths: |
-       dist/stash-win.exe
-   ```
-   `container: false` only works for the runner's own architecture (amd64).
+The `build` matrix has a single `platform` dimension. Each job runs `make build-cc-<platform>` and uploads `dist/stash-*`, so a platform's target must write exactly one `stash-*` binary. `linux` is built natively; every other platform is built in the compiler container.
+
+To add a target, for example `linux-arm64v8`:
+
+1. Add its name to the `platform` list in the `build` job. The list is an expression: the first list is used for releases and manual runs, the second for PRs and `develop` pushes. Add it to both lists to build it on every run.
+   (`include` doesn't work for this: `include` entries are applied after `exclude`, so they can't be filtered by event.)
 2. Append the binary to `RELEASE_FILES` in the `release` job.
 3. For a new Linux architecture in the Docker image, also add it to `platforms` in the `docker` job's push step. `docker/ci/x86_64/Dockerfile` already maps `linux/arm64`, `linux/arm/v7` and `linux/arm/v6` to their binaries. The `docker` job then needs those binaries in `dist/`, and the smoke-test build keeps `linux/amd64` only.
 
